@@ -44,7 +44,7 @@ thermo_style	custom step temp c_concentration
 thermo			100
 
 variable		output_steps equal 10
-dump 			dump1 all atom ${output_steps} debug.lammpstrj
+dump 			dump1 all atom ${output_steps} output.lammpstrj
 
 
 run			    1000
