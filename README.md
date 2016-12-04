@@ -28,10 +28,10 @@ Simulation of a red blood cell in fluid.
 > ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
 
 <br>
-## Example Simulation
+## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |     
 |:-------------------------------------------------------------|
-|<img src="trace_frame_470000.png">|
+|<img src="visualizations/chemical_release_RBC_device.png">|
 
 <br>
 ## File Description
