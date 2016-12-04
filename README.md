@@ -1,7 +1,8 @@
 # <sub>user</sub>**MESO 2.0**
 
 <sub>user</sub>**MESO 2.0** is an updated version of <sub>user</sub>**MESO**, which is a GPU-accelerated extension package to **LAMMPS**.
-<sub>user</sub>**MESO** was developed by Yu-Hang Tang to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
+
+<sub>user</sub>**MESO** (https://github.com/yhtang/MESOwas) was developed by Yu-Hang Tang to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
 - An atomic-free warp-synchronous neighbor list construction algorithm;
 - A 2-level particle reordering scheme, which aligns with the cell list lattice boundaries for generating strictly monotonic neighbor list;
 - A locally transposed neighbor list;
@@ -10,7 +11,27 @@
 - Radix sorting with GPU stream support;
 - Pairwise random number generation based on per-timestep binary particle signatures and the prepriority Tiny Encryption Algorithm.
 
-As an update, <sub>user</sub>**MESO 2.0** incorporates new capabilities into the existing <sub>user</sub>**MESO**. Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another newly added feature is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, it is also possible to simulate the chemical-releasing process from the red blood cells.  
+As an upgrade version, <sub>user</sub>**MESO 2.0** injects new capabilities into <sub>user</sub>**MESO** . Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable.  
+
+
+<br>
+## Compilation Guide
+> cd <working_copy>/src
+> make yes-molecule
+> make yes-user-meso
+> make meso ARCH=[sm_30|sm_35|sm_52|sm_60|...]
+
+<br>
+## Running a simple example
+Simulation of a red blood cell in fluid.
+> cd <working_copy>/exmaple/simple
+> ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
+
+<br>
+## Example Simulation
+| Chemical-release of Red Blood Cells in a Microfluidic Device |     
+|:-------------------------------------------------------------|
+|<img src="trace_frame_470000.png">|
 
 <br>
 ## File Description
@@ -53,18 +74,3 @@ The files in this section are solely needed to compute red blood cell dynamics.
 
 **fix_resetconc_tdpd_meso.cu/.h**
 > These files reset the concentration to a value.
-
-
-
-<br>
-## Compilation Guide
-> cd <working_copy>/src
-> make yes-molecule
-> make yes-user-meso
-> make meso ARCH=[sm_30|sm_35|sm_52|sm_60|...]
-
-<br>
-## Running a simple example
-Simulation of a red blood cell in fluid.
-> cd <working_copy>/exmaple/simple
-> ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
