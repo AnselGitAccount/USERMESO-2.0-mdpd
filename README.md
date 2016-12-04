@@ -31,7 +31,7 @@ Simulation of a red blood cell in fluid.
 ## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |     
 |:-------------------------------------------------------------|
-|<img src="visualizations/chemical_release_RBC_devi.ng">|
+|<img src="visualizations/chemical_release_RBC_device.png">|
 
 <br>
 ## File Description
