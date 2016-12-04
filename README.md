@@ -13,6 +13,7 @@
 
 As an upgrade version, <sub>user</sub>**MESO 2.0** injects new capabilities into <sub>user</sub>**MESO** . Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable.  
 
+The details regarding code implementation can be found at https://arxiv.org/abs/1611.06163
 
 <br>
 ## Compilation Guide
