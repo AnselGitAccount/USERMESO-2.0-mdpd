@@ -29,6 +29,7 @@ The details regarding code implementation can be found at https://arxiv.org/abs/
 ## Running a simple example
 Simulation of a red blood cell in fluid.
 > cd <working_copy>/exmaple/simple
+>
 > ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
 
 <br>
