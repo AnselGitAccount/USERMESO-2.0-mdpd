@@ -33,6 +33,13 @@ Simulation of a red blood cell in fluid.
 > ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
 
 <br>
+## Single-node benchmark
+Benchmark of RBC suspension in a single node. The simulations of different system volumes are timed.
+> cd <working_copy>/example/single_node_benchmark
+>
+> ./run_file.sh
+
+<br>
 ## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |     
 |:-------------------------------------------------------------|

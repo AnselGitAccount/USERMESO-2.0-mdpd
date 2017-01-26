@@ -1,5 +1,5 @@
 
-echo screen
+#echo screen
 
 dimension 		3
 units 			lj

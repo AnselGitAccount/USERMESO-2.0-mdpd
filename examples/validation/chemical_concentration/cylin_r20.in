@@ -1,0 +1,53 @@
+
+# echo screen
+
+dimension 		3
+units			lj
+boundary 		p f f
+newton 			off
+
+
+variable 		nspecies equal 1
+atom_style		tdpd/atomic/meso ${nspecies}
+neighbor 		0.6 bin
+neigh_modify    delay 0 every 4 check no
+
+
+read_data		meso_atomic_spec1_op_tube_r20_l80.data
+variable        RADIUS equal 20.0
+variable        LENGTH equal 80.0
+
+run_style 		mvv/meso
+pair_style		tdpd/meso 1.58 3243242 ${nspecies}
+# 				I J a0		gamma	sigma 	s1		cut	|	cut_conckappa   s2
+pair_coeff 		* * 18.75	4.5		3.0		0.41  	1.58 	1.58 	5.0 	2
+
+
+
+fix 			integrator_f 	all nve/meso
+fix	            integrator_conc all nve/tdpd/meso
+
+
+compute 		conc1 all conc/tdpd/meso 1
+thermo_style	custom step temp press c_conc1
+thermo			1000
+
+### Effective Boundary Conditions
+fix     bounce1 all bounceback/special/meso radius ${RADIUS} center 0.0 ${RADIUS} ${RADIUS} orient 1.0 0.0 0.0
+fix     bc_cons all boundary/fc/cylindrical/meso cut 1.58 radius ${RADIUS} length ${LENGTH} center 0.0 ${RADIUS} ${RADIUS} orient 1.0 0.0 0.0 poly 7 -22.95 152.5 -407.4 516.6 -235.7 -62.22 -2.874 73.54
+fix     bc_diss all boundary/fd/cylindrical/meso cut 1.58 radius ${RADIUS} length ${LENGTH} center 0.0 ${RADIUS} ${RADIUS} orient 1.0 0.0 0.0 poly_n 3 0 0 0 0 poly_t 3 10.35157973 1.76176424 -3.53542298 1.67182161
+fix     dirichl all boundary/tdpd/cylindrical/meso cut 1.58 radius ${RADIUS} length ${LENGTH} center 0.0 ${RADIUS} ${RADIUS} orient 1.0 0.0 0.0 CCD 0.1 kappa 5.0 ctype 1 a0 25.132 poly 3 0.0496294 1.66997534 -3.8720997 1.52233456
+
+
+# equilibrate system
+timestep 		0.01
+run			600
+reset_timestep 		0
+
+# -------------------------------------------------------------------------------
+fix             IC all resetconc/tdpd/meso begin 0 interval 0 n_species 1 conc 0
+dump 			dump0 all tdpd/meso 100 Conc_Eff.lammpstrj 1
+
+
+timestep		0.01
+run			12000
