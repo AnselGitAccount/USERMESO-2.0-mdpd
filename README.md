@@ -18,8 +18,11 @@ The details regarding code implementation can be found at https://arxiv.org/abs/
 <br>
 ## Compilation Guide
 > cd <working_copy>/src
+>
 > make yes-molecule
+>
 > make yes-user-meso
+>
 > make meso ARCH=[sm_30|sm_35|sm_52|sm_60|...]
 
 <br>

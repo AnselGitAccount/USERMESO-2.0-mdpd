@@ -1,0 +1,34 @@
+#echo screen
+
+dimension 		3
+boundary 		p p p
+units 			lj
+newton			off
+
+variable 		nspecies equal 1
+atom_style		tdpd/rbc/meso ${nspecies}
+neighbor 		1.0 bin
+neigh_modify	delay 0 every 1 check no
+
+read_data		edit_optimized_box_tdpd.data
+
+run_style 		mvv/meso
+timestep		0.001
+
+pair_style 		tdpd/meso 1.58 324329234  ${nspecies}
+# 				I J a0		gamma	sigma 	s1		cut    |cut_conc	kappa   s2
+pair_coeff		1 1 18.75	4.5		3.0		0.41  	1.58 	1.58 	  	8.0		2.0
+
+fix			    integrator_f all nve/meso
+
+thermo_style	custom step temp press
+thermo			100
+
+run			    1000  # equilibration
+reset_timestep 	0
+# ======================================================================================================
+
+fix             flow0 all pois/meso y x 0.4 0.5
+fix             flow1 all vprof/meso output velocity_ensemble.txt along y component x nbin 26 every 3000 window 1400
+
+run			    60000

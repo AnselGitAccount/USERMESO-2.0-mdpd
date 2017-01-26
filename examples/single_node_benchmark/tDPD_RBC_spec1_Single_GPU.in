@@ -1,0 +1,43 @@
+
+echo screen
+
+dimension 		3
+units 			lj
+boundary 		p p p
+newton			off
+
+variable 		nspecies equal 1
+atom_style 		tdpd/rbc/meso ${nspecies}
+neighbor		1.0 bin
+neigh_modify	delay 0 every 5 check no
+
+timestep 		0.001
+
+read_data		${datafile}
+
+run_style		mvv/meso
+
+pair_style		tdpd/meso 	1.58  	2313214 ${nspecies}
+# 				I J a0		gamma	sigma 	s1		cut    |cut_conc	kappa   s2
+pair_coeff		* * 4.0 	30.0 	2.38	0.25  	1.58    1.58  		5.0 	2.0
+bond_style		wlc_pow_all_visc/meso
+#				btype	kBT		r0		mu_targ	m	gamc	gamt
+bond_coeff		* 		0.09452	2.2 	100 	2.0 30.0 	90.0
+angle_style 		areavolume/meso
+angle_coeff		* 4900.0 132.868 5000.0 92.452 100.0
+dihedral_style 		bend/meso
+dihedral_coeff		* 6.025 0.0
+
+
+fix 			integrator_f 	all 	nve/meso
+fix 			integrator_conc all nve/tdpd/meso
+
+log			datafile_${datafile}_GPU_.log
+
+
+run			1000
+run			500
+run			500
+run			500
+run			500
+run			500

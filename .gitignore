@@ -1,2 +1,4 @@
 .svn*
 *.lammpstrj
+log.lammps
+*.log
