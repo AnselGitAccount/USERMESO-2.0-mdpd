@@ -15,8 +15,8 @@ As an upgrade version, <sub>user</sub>**MESO 2.0** injects new capabilities into
 
 The details regarding code implementation can be found at https://arxiv.org/abs/1611.06163
 
-<br>
 ## Compilation Guide
+
 > cd <working_copy>/src
 >
 > make yes-molecule
@@ -28,6 +28,7 @@ The details regarding code implementation can be found at https://arxiv.org/abs/
 <br>
 ## Running a simple example
 Simulation of a red blood cell in fluid.
+
 > cd <working_copy>/exmaple/simple
 >
 > ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
@@ -35,6 +36,7 @@ Simulation of a red blood cell in fluid.
 <br>
 ## Single-node benchmark
 Benchmark of RBC suspension in a single node. The simulations of different system volumes are timed.
+
 > cd <working_copy>/example/single_node_benchmark
 >
 > ./run_file.sh
