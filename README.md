@@ -25,7 +25,6 @@ The details regarding code implementation can be found at https://arxiv.org/abs/
 >
 > make meso ARCH=[sm_30|sm_35|sm_52|sm_60|...]
 
-<br>
 ## Running a simple example
 Simulation of a red blood cell in fluid.
 
@@ -33,7 +32,6 @@ Simulation of a red blood cell in fluid.
 >
 > ../../src/lmp_meso -in tDPD_RBC_spec1_Single_GPU.in
 
-<br>
 ## Single-node benchmark
 Benchmark of RBC suspension in a single node. The simulations of different system volumes are timed.
 
@@ -41,13 +39,11 @@ Benchmark of RBC suspension in a single node. The simulations of different syste
 >
 > ./run_file.sh
 
-<br>
 ## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |     
 |:-------------------------------------------------------------|
 |<img src="visualizations/chemical_release_RBC_device.png">|
 
-<br>
 ## File Description
 In addition to the source files in <sub>user</sub>**MESO** (program summary URL: http://cpc.cs.qub.ac.uk/summaries/AETN_v1_0.html), the following source files are included in <sub>user</sub>**MESO 2.0** package.
 
