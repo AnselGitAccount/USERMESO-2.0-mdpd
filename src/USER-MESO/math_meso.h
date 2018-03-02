@@ -23,7 +23,7 @@
 #define _2_TO_MINUS_31  4.6566128730773925781E-10
 #define _2_TO_MINUS_32  2.3283064365386962891E-10
 
-#if(__CUDA_ARCH__<=620)
+#if(__CUDA_ARCH__<=700)
 #define WARPSZ      32U
 #define WARPALIGN (~31U)
 #else
