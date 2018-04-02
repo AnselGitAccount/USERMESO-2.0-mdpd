@@ -145,7 +145,11 @@ __global__ void gpu_compute_rdf(
             bool masked = false;
             uint vmasked;
             if( lane_id < pack ) masked = mask[ idx ] & groupi;
+#if __CUDA_ARCH__ >= 700
+            vmasked = __ballot_sync( 0xffffffff, masked );
+#else
             vmasked = __ballot( masked );
+#endif
             if ( masked ) {
                 float4 v     = tex1Dfetch<float4>( tex_coord_merged, idx );
                 int p_ins = __popc( vmasked & __lanemask_lt() );
