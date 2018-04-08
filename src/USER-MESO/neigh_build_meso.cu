@@ -96,7 +96,7 @@ __global__ void __launch_bounds__( 128, 16 ) gpu_build_neighbor_list(
                     uint n_hit;
                     // CORE PART
                     is_hit = p1 && p3;
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
                     n_hit  = __ballot_sync( 0xffffffff, is_hit );
 #else
                     n_hit  = __ballot( is_hit );
@@ -107,7 +107,7 @@ __global__ void __launch_bounds__( 128, 16 ) gpu_build_neighbor_list(
 
                     // SKIN PART
                     is_hit = !p1 && p2 && p3;
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
                     n_hit  = __ballot_sync( 0xffffffff, is_hit );
 #else
                     n_hit  = __ballot( is_hit );
@@ -149,7 +149,7 @@ __global__ void gpu_prune_neigh_list(
         n_skin = pair_count_skin[gid];
     }
     int np      = n_core + n_skin;
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
     int nPairAvg   = __warp_sum( np ) / __popc( __ballot_sync( 0xffffffff, 1 ) );
 #else
     int nPairAvg   = __warp_sum( np ) / __popc( __ballot( 1 ) );
@@ -158,14 +158,14 @@ __global__ void gpu_prune_neigh_list(
     int nPruneCumu = __warp_prefix_excl( nPrune );
 
     if( __laneid() == WARPSZ - 1 ) pIns = atomic_add( TailCount, nPruneCumu + nPrune );
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
     pIns = __shfl_sync( 0xffffffff, pIns, WARPSZ - 1 );
 #else
     pIns = __shfl( pIns, WARPSZ - 1 );
 #endif
 
     for( int i = 0 ; i < SQ_SIZE ; i++ ) {
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
         int nCut   = __shfl_sync( 0xffffffff, nPrune    , i, SQ_SIZE );
         int nTotal = __shfl_sync( 0xffffffff, n_skin    , i, SQ_SIZE );
         int GID    = __shfl_sync( 0xffffffff, gid       , i, SQ_SIZE );
@@ -205,7 +205,7 @@ __global__ void gpu_join_neigh_list(
     }
 
     int lane_id = __laneid();
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
     int base   = __shfl_sync( 0xffffffff, gid, 0 ) * pair_buffer_padding;
 #else
     int base   = __shfl( gid, 0 ) * pair_buffer_padding;
@@ -213,7 +213,7 @@ __global__ void gpu_join_neigh_list(
 
 #pragma unroll
     for( int i = 0 ; i < WARPSZ; i++ ) {
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
         int n1 = __shfl_sync( 0xffffffff, n_core, i );
         int n2 = __shfl_sync( 0xffffffff, n_skin, i );
 #else
@@ -560,7 +560,7 @@ __global__ void gpu_filter_exclusion(
                     if( lane_id < N ) s = excl_table[ i * excltable_padding + P + lane_id ];
 
                     for( int k = 0 ; k < N ; k++ ) {
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
                         int o = __shfl_sync( 0xffffffff, s, k );
 #else
                         int o = __shfl( s, k );
@@ -568,7 +568,7 @@ __global__ void gpu_filter_exclusion(
                         keep = ( keep && ( t != o ) );
                     }
                 }
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 900
                 int n_keep = __ballot_sync( 0xffffffff, keep );
 #else
                 int n_keep = __ballot( keep );
