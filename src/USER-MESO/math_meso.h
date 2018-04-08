@@ -629,35 +629,19 @@ __inline__ __device__ void atomicMin( double* address, double val )
 
 __device__ __inline__ int __shfl_xor_( int var, int laneMask, int width = warpSize )
 {
-#if __CUDA_ARCH__ >= 900
-    unsigned int mask = 0xffffffff;
-    return __shfl_xor_sync( mask, var, laneMask, width );
-#else 
     return __shfl_xor( var, laneMask, width );
-#endif
 }
 __device__ __inline__ float __shfl_xor_( float var, int laneMask, int width = warpSize )
 {
-#if __CUDA_ARCH__ >= 900
-    unsigned int mask = 0xffffffff;
-    return __shfl_xor_sync( mask, var, laneMask, width );
-#else 
     return __shfl_xor( var, laneMask, width );
-#endif
 }
 
 __inline__ __device__ double __shfl_xor_( double var, int laneMask, int width = warpSize )
 {
     int hi, lo;
     asm volatile( "mov.b64 { %0, %1 }, %2;" : "=r"( lo ), "=r"( hi ) : "d"( var ) );
-#if __CUDA_ARCH__ >= 900
-    unsigned int mask = 0xffffffff;
-    hi = __shfl_xor_sync( mask, hi, laneMask, width );
-    lo = __shfl_xor_sync( mask, lo, laneMask, width );
-#else
     hi = __shfl_xor( hi, laneMask, width );
     lo = __shfl_xor( lo, laneMask, width );
-#endif
     return __hiloint2double( hi, lo );
 }
 
