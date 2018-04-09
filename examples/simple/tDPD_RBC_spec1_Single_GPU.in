@@ -47,5 +47,5 @@ variable		output_steps equal 10
 dump 			dump1 all atom ${output_steps} output.lammpstrj
 
 
-run			    1000
+run			    10000
 
