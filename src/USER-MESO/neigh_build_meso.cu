@@ -96,22 +96,14 @@ __global__ void __launch_bounds__( 128, 16 ) gpu_build_neighbor_list(
                     uint n_hit;
                     // CORE PART
                     is_hit = p1 && p3;
-#if __CUDA_ARCH__ >= 900
-                    n_hit  = __ballot_sync( 0xffffffff, is_hit );
-#else
                     n_hit  = __ballot( is_hit );
-#endif
                     my_insert = n_core[ i ] + __popc( n_hit & __lanemask_lt() );
                     if( is_hit ) pair_table[ aid[i] * pair_buffer_padding + my_insert ] = aid_j;
                     if( leader ) n_core[ i ] += __popc( n_hit );
 
                     // SKIN PART
                     is_hit = !p1 && p2 && p3;
-#if __CUDA_ARCH__ >= 900
-                    n_hit  = __ballot_sync( 0xffffffff, is_hit );
-#else
                     n_hit  = __ballot( is_hit );
-#endif
                     my_insert = n_skin[ i ] + __popc( n_hit & __lanemask_lt() );
                     if( is_hit ) pair_table[( aid[i] + 1 ) * pair_buffer_padding - 1 - my_insert ] = aid_j;
                     if( leader ) n_skin[ i ] += __popc( n_hit );
@@ -149,33 +141,18 @@ __global__ void gpu_prune_neigh_list(
         n_skin = pair_count_skin[gid];
     }
     int np      = n_core + n_skin;
-#if __CUDA_ARCH__ >= 900
-    int nPairAvg   = __warp_sum( np ) / __popc( __ballot_sync( 0xffffffff, 1 ) );
-#else
     int nPairAvg   = __warp_sum( np ) / __popc( __ballot( 1 ) );
-#endif
     int nPrune     = max( min( np - nPairAvg, n_skin ), 0 ); // max(0): cannot increase pair count.., min(skin): only cut skin pairs
     int nPruneCumu = __warp_prefix_excl( nPrune );
 
     if( __laneid() == WARPSZ - 1 ) pIns = atomic_add( TailCount, nPruneCumu + nPrune );
-#if __CUDA_ARCH__ >= 900
-    pIns = __shfl_sync( 0xffffffff, pIns, WARPSZ - 1 );
-#else
     pIns = __shfl( pIns, WARPSZ - 1 );
-#endif
 
     for( int i = 0 ; i < SQ_SIZE ; i++ ) {
-#if __CUDA_ARCH__ >= 900
-        int nCut   = __shfl_sync( 0xffffffff, nPrune    , i, SQ_SIZE );
-        int nTotal = __shfl_sync( 0xffffffff, n_skin    , i, SQ_SIZE );
-        int GID    = __shfl_sync( 0xffffffff, gid       , i, SQ_SIZE );
-        int pInc   = __shfl_sync( 0xffffffff, nPruneCumu, i, SQ_SIZE );
-#else
         int nCut   = __shfl( nPrune    , i, SQ_SIZE );
         int nTotal = __shfl( n_skin    , i, SQ_SIZE );
         int GID    = __shfl( gid       , i, SQ_SIZE );
         int pInc   = __shfl( nPruneCumu, i, SQ_SIZE );
-#endif
         for( int p = subLaneID; p < nCut; p += SQ_SIZE ) {
 //          Tail[ pIns + pInc + p ] = make_int2( GID, pair_table[ GID * pair_buffer_padding + np - nCut + p ] );
             Tail[ pIns + pInc + p ] = make_int2( GID, pair_table[( GID + 1 ) * pair_buffer_padding - 1 - ( nTotal - nCut + p ) ] );
@@ -205,21 +182,12 @@ __global__ void gpu_join_neigh_list(
     }
 
     int lane_id = __laneid();
-#if __CUDA_ARCH__ >= 900
-    int base   = __shfl_sync( 0xffffffff, gid, 0 ) * pair_buffer_padding;
-#else
     int base   = __shfl( gid, 0 ) * pair_buffer_padding;
-#endif
 
 #pragma unroll
     for( int i = 0 ; i < WARPSZ; i++ ) {
-#if __CUDA_ARCH__ >= 900
-        int n1 = __shfl_sync( 0xffffffff, n_core, i );
-        int n2 = __shfl_sync( 0xffffffff, n_skin, i );
-#else
         int n1 = __shfl( n_core, i );
         int n2 = __shfl( n_skin, i );
-#endif
         int start = n1 - ( n1 % WARPSZ );
         int front = base + n1;
         int rear  = pair_buffer_padding - n2;
@@ -560,19 +528,11 @@ __global__ void gpu_filter_exclusion(
                     if( lane_id < N ) s = excl_table[ i * excltable_padding + P + lane_id ];
 
                     for( int k = 0 ; k < N ; k++ ) {
-#if __CUDA_ARCH__ >= 900
-                        int o = __shfl_sync( 0xffffffff, s, k );
-#else
                         int o = __shfl( s, k );
-#endif
                         keep = ( keep && ( t != o ) );
                     }
                 }
-#if __CUDA_ARCH__ >= 900
-                int n_keep = __ballot_sync( 0xffffffff, keep );
-#else
                 int n_keep = __ballot( keep );
-#endif
                 if( keep ) {
                     pair_table[ i * pairtable_padding + base + __popc( n_keep << ( WARPSZ - lane_id ) ) ] = j;
                 }
