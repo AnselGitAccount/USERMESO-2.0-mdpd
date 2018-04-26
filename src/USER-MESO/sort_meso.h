@@ -37,7 +37,11 @@ __global__ void gpu_radix_histogram(
         int radix = ( key[i] >> bit ) & ( RADIX - 1 );
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
+#if __CUDA_ARCH__ >= 700
+            uint before = __ballot_sync( __activemask(), radix == r );
+#else
             uint before = __ballot( radix == r );
+#endif
             if( radix  == r ) tprev[i] = __popc( before << ( WARPSZ - laneID ) );
             if( laneID == 0 ) wLocal[ r ][ i / WARPSZ ] = __popc( before ) ;
         }
@@ -130,7 +134,11 @@ __forceinline__ __device__ void radix_histogram_singleblock(
         int radix = ( key[i] >> bit ) & ( RADIX - 1 );
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
+#if __CUDA_ARCH__ >= 700
+            uint before = __ballot_sync( __activemask(), radix == r );
+#else	
             uint before = __ballot( radix == r );
+#endif
             if( radix  == r ) tprev[i] = __popc( before << ( WARPSZ - laneID ) );
             if( laneID == 0 ) wLocal[ r ][ i / WARPSZ ] = __popc( before ) ;
         }
@@ -263,8 +271,13 @@ __global__ void gpu_sort_binary_singleblock(
         int laneID = __laneid();
         for( int i = threadIdx.x; i < n ; i += blockDim.x ) {
             int radix = ( key_in[i] >> bit ) & 1;
+#if __CUDA_ARCH >= 700
+            uint _1_before = __ballot_sync( __activemask(),  radix );
+            uint _0_before = __ballot_sync( __activemask(), !radix );//~ _1_before;
+#else
             uint _1_before = __ballot(  radix );
             uint _0_before = __ballot( !radix );//~ _1_before;
+#endif
             int shift = WARPSZ - laneID;
             thread_prev[i] = radix ? __popc( _1_before << shift ) : __popc( _0_before << shift );
             if( laneID == 0 ) {
