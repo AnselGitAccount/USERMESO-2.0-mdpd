@@ -36,9 +36,11 @@ const static int OMPDEBUG = 0;
 
 //#define LMP_MESO_LOG_MEM
 //#define LMP_MESO_LOG_L1
-//#define LMP_MESO_LOG_L2
+#define LMP_MESO_LOG_L2
 //#define LMP_MESO_LOG_L3
 #define LMP_MESO_STRICT 0
+
+#define TRANSFER_WARNING 0   // Turn on/off the warning nothing to transfer (border/ghost)
 
 struct AtomAttribute {
     typedef unsigned long long Descriptor;

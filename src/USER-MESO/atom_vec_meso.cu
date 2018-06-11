@@ -232,7 +232,8 @@ std::vector<CUDAEvent> MesoAtomVec::transfer( AtomAttribute::Descriptor per_atom
                      ( per_atom_prop & AtomAttribute::BORDER ) ? ( "border" ) : ( "" ),
                      ( per_atom_prop & AtomAttribute::GHOST ) ? ( "ghost" ) : ( "" )
                    );
-            meso_error->warning( FLERR, info );
+            if( TRANSFER_WARNING )
+            	meso_error->warning( FLERR, info );
         }
         return events;
     }
