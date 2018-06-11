@@ -145,7 +145,7 @@ __global__ void gpu_compute_rdf(
             bool masked = false;
             uint vmasked;
             if( lane_id < pack ) masked = mask[ idx ] & groupi;
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
             vmasked = __ballot_sync( 0xffffffff, masked );
 #else
             vmasked = __ballot( masked );

@@ -23,12 +23,17 @@
 #define _2_TO_MINUS_31  4.6566128730773925781E-10
 #define _2_TO_MINUS_32  2.3283064365386962891E-10
 
-#if(__CUDA_ARCH__<=700)
+#if(__CUDA_ARCH__<=800)
 #define WARPSZ      32U
 #define WARPALIGN (~31U)
 #else
 #error UNKNOWN ARCHITECTURE FOR DETERMINING WARP SIZE
 #endif
+
+#ifndef CUDART_VERSION
+#error CUDART_VERSION Undefined!
+#endif
+
 
 inline int ceiling( int x, int inc )
 {
@@ -629,7 +634,7 @@ __inline__ __device__ void atomicMin( double* address, double val )
 
 __device__ __inline__ int __shfl_xor_( int var, int laneMask, int width = warpSize )
 {
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
     unsigned int mask = 0xffffffff;
     return __shfl_xor_sync( mask, var, laneMask, width );
 #else 
@@ -638,7 +643,7 @@ __device__ __inline__ int __shfl_xor_( int var, int laneMask, int width = warpSi
 }
 __device__ __inline__ float __shfl_xor_( float var, int laneMask, int width = warpSize )
 {
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
     unsigned int mask = 0xffffffff;
     return __shfl_xor_sync( mask, var, laneMask, width );
 #else 
@@ -650,7 +655,7 @@ __inline__ __device__ double __shfl_xor_( double var, int laneMask, int width = 
 {
     int hi, lo;
     asm volatile( "mov.b64 { %0, %1 }, %2;" : "=r"( lo ), "=r"( hi ) : "d"( var ) );
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
     unsigned int mask = 0xffffffff;
     hi = __shfl_xor_sync( mask, hi, laneMask, width );
     lo = __shfl_xor_sync( mask, lo, laneMask, width );

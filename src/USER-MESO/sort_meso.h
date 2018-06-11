@@ -37,7 +37,7 @@ __global__ void gpu_radix_histogram(
         int radix = ( key[i] >> bit ) & ( RADIX - 1 );
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
             uint before = __ballot_sync( 0xffffffff, radix == r );
 #else
             uint before = __ballot( radix == r );
@@ -134,7 +134,7 @@ __forceinline__ __device__ void radix_histogram_singleblock(
         int radix = ( key[i] >> bit ) & ( RADIX - 1 );
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
             uint before = __ballot_sync( 0xffffffff, radix == r );
 #else
             uint before = __ballot( radix == r );
@@ -271,7 +271,7 @@ __global__ void gpu_sort_binary_singleblock(
         int laneID = __laneid();
         for( int i = threadIdx.x; i < n ; i += blockDim.x ) {
             int radix = ( key_in[i] >> bit ) & 1;
-#if __CUDA_ARCH__ >= 700
+#if CUDART_VERSION >= 9000
             uint _1_before = __ballot_sync( 0xffffffff, radix );
             uint _0_before = __ballot_sync( 0xffffffff,!radix );//~ _1_before;
 #else
