@@ -44,11 +44,14 @@ public:
     virtual void dp2sp_merged( int seed, int p_beg, int p_end, bool offset = false );
     virtual bigint memory_usage();
 
+    double ested_max_particle_density;
+
 protected:
     DeviceScalar<r64> dev_rho;
     Pinned<r64> dev_rho_pinned;
     DeviceScalar<float4> dev_therm_merged;
     double *rho;
+
 
     virtual void transfer_impl( std::vector<CUDAEvent> &events, AtomAttribute::Descriptor per_atom_prop, TransferDirection direction, int p_beg, int n_atom, int p_stream, int p_inc, int* permute_to, int* permute_from, int action, bool streamed);
 };

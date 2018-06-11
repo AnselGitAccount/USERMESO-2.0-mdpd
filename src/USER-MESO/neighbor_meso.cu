@@ -25,6 +25,7 @@
 #include "bin_meso.h"
 #include "neigh_list_meso.h"
 #include "neighbor_meso.h"
+#include "atom_vec_mdpd_atomic_meso.h"
 
 using namespace LAMMPS_NS;
 
@@ -129,7 +130,7 @@ __global__ void gpu_map_bond_hash(
 void MesoNeighbor::bond_all()
 {
 #ifdef LMP_MESO_LOG_L2
-    fprintf( stderr, "<MESO> Rebuilding bond table on device %d\n", meso_device->DevicePool[0] );
+    //fprintf( stderr, "<MESO> Rebuilding bond table on device %d\n", meso_device->DevicePool[0] );
 #endif
 
     if( atom->map_style == 1 ) {
@@ -850,13 +851,22 @@ void MesoNeighbor::setup_bins()
 
     this->my_box = MyBox ;
     this->local_particle_density = atom->nlocal / MyBoxVolume;
+
+    // If atom_style is mdpd/atomic/meso, take an estimate to local_particle_density.
+    if( !strcmp(atom->atom_style, "mdpd/atomic/meso") ) {
+    	class AtomVecMDPDAtomic* mdpdatomvec = dynamic_cast<AtomVecMDPDAtomic*>( atom->avec );
+    	if( mdpdatomvec->ested_max_particle_density )
+    		this->local_particle_density = mdpdatomvec->ested_max_particle_density;
+    }
+
     this->expected_neigh_count = local_particle_density * ( 4.0 / 3.0 * 3.142 * pow( cutneighmax, 3.0 ) ) ;
     this->expected_neigh_count *= 4.0 ;
     this->expected_neigh_count = max( expected_neigh_count, ( double )max( 32, atom->maxspecial ) );
-    this->expected_neigh_count = 192*8;     // hard-coded       Ansel
 #ifdef LMP_MESO_LOG_L2
+    fprintf( stderr, "<MESO> Expected local-particle-density: %.2lf\n", local_particle_density );
     fprintf( stderr, "<MESO> Expected neighbor count (max pair num) of each particle: %.1lf\n", expected_neigh_count );
 #endif
+//    this->expected_neigh_count = 32*3; // 192*8;     // hard-coded       Ansel
 
     double binsize_optimal = 1.0 * cutneighmax ;
     this->expected_bin_size = local_particle_density * binsize_optimal * binsize_optimal * binsize_optimal ;

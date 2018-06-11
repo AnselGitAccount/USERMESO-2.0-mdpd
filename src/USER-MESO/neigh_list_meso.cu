@@ -67,11 +67,11 @@ void MesoNeighList::stencil_allocate( int smax, int style )
     int bins_padding    = ceiling( most_bins, 32 );
     int stencil_padding = max( 1.0, most_bins * meso_neighbor->expected_bin_size * 2.25 );
     stencil_padding     = ceiling( stencil_padding, 32 );
-    stencil_padding     = 192*40;                           // hard-coded,   Ansel
 #ifdef LMP_MESO_LOG_L2
     fprintf( stderr, "<MESO> bins_padding %d\n", bins_padding );
     fprintf( stderr, "<MESO> stencil_padding %d\n", stencil_padding );
 #endif
+//    stencil_padding     = 32*16; // 192*40;                 // hard-coded,   Ansel
 
     dev_neighbor_count.grow( n_bin_max, false );
     dev_neighbor_bin  .grow( bins_padding, n_bin_max, false );

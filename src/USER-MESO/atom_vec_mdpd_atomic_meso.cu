@@ -12,6 +12,7 @@
 #include "engine_meso.h"
 #include "neighbor_meso.h"
 #include "atom_vec_mdpd_atomic_meso.h"
+#include "input.h"
 
 using namespace LAMMPS_NS;
 
@@ -21,6 +22,12 @@ AtomVecMDPDAtomic::AtomVecMDPDAtomic( LAMMPS *lmp ) :
     dev_rho_pinned( lmp, "AtomVecMDPDAtomic::dev_rho_pinned" ),
     dev_therm_merged( lmp, "AtomVecMDPDAtomic::dev_therm_merged" )
 {
+    if (lmp->input->narg == 1)
+    	error->all( FLERR, "For atom_style mdpd/atomic/meso, an estimation to maximum local particle density must be given. "
+    			"Or input 0 for default.");
+    else ested_max_particle_density = atof(lmp->input->arg[1]);
+
+
     comm_x_only    = 0;
     comm_f_only    = 0;
     mass_type      = 1;
