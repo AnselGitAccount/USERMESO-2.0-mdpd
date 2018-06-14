@@ -6,9 +6,11 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
+
+
 CC =		nvcc
 ifeq ($(DEBUG),1)
-CCFLAGS =	-g -G -lineinfo -ccbin CC -Xcompiler -fopenmp -O3 -x cu -arch=sm_35 --maxrregcount 64
+CCFLAGS =	-g -G -lineinfo -ccbin CC -Xcompiler -fopenmp -O0 -x cu -arch=sm_35 --maxrregcount 64
 else
 CCFLAGS =	-ccbin CC -Xcompiler -fopenmp -O3 -x cu -arch=sm_35 --maxrregcount 64
 endif
@@ -21,7 +23,12 @@ SHFLAGS =
 DEPFLAGS =	-M
 
 LINK =		CC
-LINKFLAGS =	-O3 -fopenmp
+ifeq ($(DEBUG),1)
+LINKFLAGS =	-O0 -g -fopenmp
+else 
+LINKFLAGS =     -O3 -fopenmp
+endif
+
 
 ifeq ($(PROFILE),1)
 LIB      += -lnvToolsExt
