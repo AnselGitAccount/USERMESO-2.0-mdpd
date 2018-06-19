@@ -97,7 +97,7 @@ __global__ void __launch_bounds__( 128, 16 ) gpu_build_neighbor_list(
                     // CORE PART
                     is_hit = p1 && p3;
 #if CUDART_VERSION >= 9000
-                    n_hit  = __ballot_sync( 0xffffffff, is_hit );
+                    n_hit  = __ballot_sync( __activemask(), is_hit );
 #else
                     n_hit  = __ballot( is_hit );
 #endif
@@ -108,7 +108,7 @@ __global__ void __launch_bounds__( 128, 16 ) gpu_build_neighbor_list(
                     // SKIN PART
                     is_hit = !p1 && p2 && p3;
 #if CUDART_VERSION >= 9000
-                    n_hit  = __ballot_sync( 0xffffffff, is_hit );
+                    n_hit  = __ballot_sync( __activemask(), is_hit );
 #else
                     n_hit  = __ballot( is_hit );
 #endif
@@ -150,7 +150,7 @@ __global__ void gpu_prune_neigh_list(
     }
     int np      = n_core + n_skin;
 #if CUDART_VERSION >= 9000
-    int nPairAvg   = __warp_sum( np ) / __popc( __ballot_sync( 0xffffffff, 1 ) );
+    int nPairAvg   = __warp_sum( np ) / __popc( __ballot_sync( __activemask(), 1 ) );
 #else
     int nPairAvg   = __warp_sum( np ) / __popc( __ballot( 1 ) );
 #endif
@@ -569,7 +569,7 @@ __global__ void gpu_filter_exclusion(
                     }
                 }
 #if CUDART_VERSION >= 9000
-                int n_keep = __ballot_sync( 0xffffffff, keep );
+                int n_keep = __ballot_sync( __activemask(), keep );
 #else
                 int n_keep = __ballot( keep );
 #endif

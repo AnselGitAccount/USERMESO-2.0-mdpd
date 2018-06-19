@@ -38,7 +38,7 @@ __global__ void gpu_radix_histogram(
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
 #if CUDART_VERSION >= 9000
-            uint before = __ballot_sync( 0xffffffff, radix == r );
+            uint before = __ballot_sync( __activemask(), radix == r );
 #else
             uint before = __ballot( radix == r );
 #endif
@@ -135,7 +135,7 @@ __forceinline__ __device__ void radix_histogram_singleblock(
 #pragma unroll
         for( int r = 0 ; r < RADIX ; r++ ) {
 #if CUDART_VERSION >= 9000
-            uint before = __ballot_sync( 0xffffffff, radix == r );
+            uint before = __ballot_sync( __activemask(), radix == r );
 #else
             uint before = __ballot( radix == r );
 #endif
@@ -272,8 +272,8 @@ __global__ void gpu_sort_binary_singleblock(
         for( int i = threadIdx.x; i < n ; i += blockDim.x ) {
             int radix = ( key_in[i] >> bit ) & 1;
 #if CUDART_VERSION >= 9000
-            uint _1_before = __ballot_sync( 0xffffffff, radix );
-            uint _0_before = __ballot_sync( 0xffffffff,!radix );//~ _1_before;
+            uint _1_before = __ballot_sync( __activemask(), radix );
+            uint _0_before = __ballot_sync( __activemask(),!radix );//~ _1_before;
 #else
             uint _1_before = __ballot(  radix );
             uint _0_before = __ballot( !radix );//~ _1_before;
