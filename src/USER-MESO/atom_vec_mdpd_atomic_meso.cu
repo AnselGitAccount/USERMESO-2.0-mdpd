@@ -19,36 +19,38 @@ using namespace LAMMPS_NS;
 AtomVecMDPDAtomic::AtomVecMDPDAtomic( LAMMPS *lmp ) :
     AtomVecDPDAtomic( lmp ),
     dev_rho( lmp, "AtomVecMDPDAtomic::dev_rho" ),
+    dev_phi( lmp, "AtomVecMDPDAtomic::dev_phi" ),
     dev_rho_pinned( lmp, "AtomVecMDPDAtomic::dev_rho_pinned" ),
-    dev_therm_merged( lmp, "AtomVecMDPDAtomic::dev_therm_merged" )
+    dev_phi_pinned( lmp, "AtomVecMDPDAtomic::dev_phi_pinned" )
+//    dev_therm_merged( lmp, "AtomVecMDPDAtomic::dev_therm_merged" )
 {
     if (lmp->input->narg == 1)
     	error->all( FLERR, "For atom_style mdpd/atomic/meso, an estimation to maximum local particle density must be given. "
     			"Or input 0 for default.");
     else ested_max_particle_density = atof(lmp->input->arg[1]);
 
-
     comm_x_only    = 0;
     comm_f_only    = 0;
     mass_type      = 1;
-    size_forward   = 4;
-    size_border    = 7;
+    size_forward   = 5;   // xyz + rho + phi
+    size_border    = 8;   // xyz + tag + type + mask + rho + phi
     size_velocity  = 3;
-    size_data_atom = 6;
+    size_data_atom = 5;   // No rho or phi in data file.
     size_data_vel  = 4;
     xcol_data      = 3;
 
     cudable        = 1;
     pre_sort     = AtomAttribute::LOCAL  | AtomAttribute::COORD ;
-    post_sort    = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO;
-    pre_border   = AtomAttribute::BORDER | AtomAttribute::ESSENTIAL | AtomAttribute::RHO;
-    post_border  = AtomAttribute::GHOST  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO;
-    pre_comm     = AtomAttribute::BORDER | AtomAttribute::COORD     | AtomAttribute::VELOC | AtomAttribute::RHO;
-    post_comm    = AtomAttribute::GHOST  | AtomAttribute::COORD     | AtomAttribute::VELOC | AtomAttribute::RHO;
-    pre_exchange = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO;
-    pre_output   = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::FORCE | AtomAttribute::RHO ;
+    post_sort    = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO | AtomAttribute::PHI;
+    pre_border   = AtomAttribute::BORDER | AtomAttribute::ESSENTIAL | AtomAttribute::RHO | AtomAttribute::PHI;
+    post_border  = AtomAttribute::GHOST  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO | AtomAttribute::PHI;
+    pre_comm     = AtomAttribute::BORDER | AtomAttribute::COORD     | AtomAttribute::VELOC | AtomAttribute::RHO | AtomAttribute::PHI;
+    post_comm    = AtomAttribute::GHOST  | AtomAttribute::COORD     | AtomAttribute::VELOC | AtomAttribute::RHO | AtomAttribute::PHI;
+    pre_exchange = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::RHO | AtomAttribute::PHI;
+    pre_output   = AtomAttribute::LOCAL  | AtomAttribute::ESSENTIAL | AtomAttribute::FORCE | AtomAttribute::RHO | AtomAttribute::PHI;
 
     rho = NULL;
+    phi = NULL;
 }
 
 void AtomVecMDPDAtomic::copy( int i, int j, int delflag )
@@ -64,6 +66,7 @@ void AtomVecMDPDAtomic::copy( int i, int j, int delflag )
     v[j][1] = v[i][1];
     v[j][2] = v[i][2];
     rho[j] = rho[i];
+    phi[j] = phi[i];
 }
 
 void AtomVecMDPDAtomic::grow( int n )
@@ -80,6 +83,7 @@ void AtomVecMDPDAtomic::grow_cpu( int n )
     AtomVecDPDAtomic::grow_cpu( n );
 
     rho = memory->grow( atom->rho, nmax, "atom:rho" );
+    phi = memory->grow( atom->phi, nmax, "atom:phi" );
 }
 
 void AtomVecMDPDAtomic::grow_device( int nmax_new )
@@ -88,12 +92,14 @@ void AtomVecMDPDAtomic::grow_device( int nmax_new )
 
     // gpu global memory
     meso_atom->dev_rho = dev_rho.grow( nmax_new, false, true );
-    meso_atom->dev_therm_merged = dev_therm_merged.grow( nmax_new, false, false );
+    meso_atom->dev_phi = dev_phi.grow( nmax_new, false, true );
+//    meso_atom->dev_therm_merged = dev_therm_merged.grow( nmax_new, false, false );
 
     // texture
     meso_atom->tex_rho.bind( dev_rho );   // Use rho in dev_rho
+    meso_atom->tex_phi.bind( dev_phi );
     meso_atom->tex_mass.bind( dev_mass );
-    meso_atom->tex_misc("therm").bind( dev_therm_merged );   // Will not use rho in tex_therm_merged
+//    meso_atom->tex_misc("therm").bind( dev_therm_merged );   // Will not use rho in tex_therm_merged
 }
 
 void AtomVecMDPDAtomic::pin_host_array()
@@ -101,6 +107,7 @@ void AtomVecMDPDAtomic::pin_host_array()
     AtomVecDPDAtomic::pin_host_array();
 
     if( atom->rho ) dev_rho_pinned.map_host( atom->nmax, atom->rho );
+    if( atom->phi ) dev_phi_pinned.map_host( atom->nmax, atom->phi );
 }
 
 void AtomVecMDPDAtomic::unpin_host_array()
@@ -108,6 +115,7 @@ void AtomVecMDPDAtomic::unpin_host_array()
     AtomVecDPDAtomic::unpin_host_array();
 
     dev_rho_pinned.unmap_host( atom->rho );
+    dev_phi_pinned.unmap_host( atom->phi );
 }
 
 void AtomVecMDPDAtomic::transfer_impl(
@@ -122,6 +130,11 @@ void AtomVecMDPDAtomic::transfer_impl(
             transfer_scalar(
                 dev_rho_pinned, dev_rho, direction, permute_from, p_beg, n_atom, meso_device->stream( p_stream += p_inc ), action ) );
     }
+    if( per_atom_prop & AtomAttribute::PHI ) {
+        events.push_back(
+            transfer_scalar(
+                dev_phi_pinned, dev_phi, direction, permute_from, p_beg, n_atom, meso_device->stream( p_stream += p_inc ), action ) );
+    }
 }
 
 __global__ void gpu_merge_xvt_mdpd(
@@ -131,7 +144,7 @@ __global__ void gpu_merge_xvt_mdpd(
     r64* __restrict mass, r64* __restrict rho,
     float4* __restrict coord_merged,
     float4* __restrict veloc_merged,
-    float4* __restrict therm_merged,
+//    float4* __restrict therm_merged,
     const r64 cx, const r64 cy, const r64 cz,
     const int seed1,
     const int seed2,
@@ -153,11 +166,11 @@ __global__ void gpu_merge_xvt_mdpd(
         veloc.w = __uint_as_float( premix_TEA<32>( __brev( tag[i] ), seed1 ) );
         veloc_merged[i] = veloc;
 
-        float4 therm;
+//        float4 therm;
 //        therm.x = rho[i];
 //        therm.y = 1.0 / mass[i];
 //        therm.w = __uint_as_float( premix_TEA<32>( tag[i], seed2 ) );
-        therm_merged[i] = therm;
+//        therm_merged[i] = therm;
     }
 }
 
@@ -185,7 +198,7 @@ void AtomVecMDPDAtomic::dp2sp_merged( int seed, int p_beg, int p_end, bool offse
         dev_rho,
         dev_coord_merged,
         dev_veloc_merged,
-        dev_therm_merged,
+//        dev_therm_merged,
         cx, cy, cz,
         seed,
         seed*1664525U+1013904223U,
@@ -208,6 +221,7 @@ int AtomVecMDPDAtomic::pack_comm( int n, int *list, double *buf,
             buf[m++] = x[j][1];
             buf[m++] = x[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
         }
     } else {
         if( domain->triclinic == 0 ) {
@@ -225,6 +239,7 @@ int AtomVecMDPDAtomic::pack_comm( int n, int *list, double *buf,
             buf[m++] = x[j][1] + dy;
             buf[m++] = x[j][2] + dz;
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
         }
     }
     return m;
@@ -247,6 +262,7 @@ int AtomVecMDPDAtomic::pack_comm_vel( int n, int *list, double *buf,
             buf[m++] = v[j][1];
             buf[m++] = v[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
         }
     } else {
         if( domain->triclinic == 0 ) {
@@ -267,6 +283,7 @@ int AtomVecMDPDAtomic::pack_comm_vel( int n, int *list, double *buf,
             buf[m++] = v[j][1];
             buf[m++] = v[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
         }
     }
     return m;
@@ -285,6 +302,7 @@ void AtomVecMDPDAtomic::unpack_comm( int n, int first, double *buf )
         x[i][1] = buf[m++];
         x[i][2] = buf[m++];
         rho[i]  = buf[m++];
+        phi[i]  = buf[m++];
     }
 }
 
@@ -302,6 +320,7 @@ void AtomVecMDPDAtomic::unpack_comm_vel( int n, int first, double *buf )
         v[i][1] = buf[m++];
         v[i][2] = buf[m++];
         rho[i]  = buf[m++];
+        phi[i]  = buf[m++];
     }
 }
 
@@ -321,6 +340,7 @@ int AtomVecMDPDAtomic::pack_border( int n, int *list, double *buf,
             buf[m++] = x[j][1];
             buf[m++] = x[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
             buf[m++] = tag[j];
             buf[m++] = type[j];
             buf[m++] = mask[j];
@@ -341,6 +361,7 @@ int AtomVecMDPDAtomic::pack_border( int n, int *list, double *buf,
             buf[m++] = x[j][1] + dy;
             buf[m++] = x[j][2] + dz;
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
             buf[m++] = tag[j];
             buf[m++] = type[j];
             buf[m++] = mask[j];
@@ -366,6 +387,7 @@ int AtomVecMDPDAtomic::pack_border_vel( int n, int *list, double *buf,
             buf[m++] = v[j][1];
             buf[m++] = v[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
             buf[m++] = tag[j];
             buf[m++] = type[j];
             buf[m++] = mask[j];
@@ -389,6 +411,7 @@ int AtomVecMDPDAtomic::pack_border_vel( int n, int *list, double *buf,
             buf[m++] = v[j][1];
             buf[m++] = v[j][2];
             buf[m++] = rho[j];
+            buf[m++] = phi[j];
             buf[m++] = tag[j];
             buf[m++] = type[j];
             buf[m++] = mask[j];
@@ -411,6 +434,7 @@ void AtomVecMDPDAtomic::unpack_border( int n, int first, double *buf )
         x[i][1] = buf[m++];
         x[i][2] = buf[m++];
         rho[i]  = buf[m++];
+        phi[i]  = buf[m++];
         tag[i]  = static_cast<int>( buf[m++] );
         type[i] = static_cast<int>( buf[m++] );
         mask[i] = static_cast<int>( buf[m++] );
@@ -432,6 +456,7 @@ void AtomVecMDPDAtomic::unpack_border_vel( int n, int first, double *buf )
         v[i][1] = buf[m++];
         v[i][2] = buf[m++];
         rho[i]  = buf[m++];
+        phi[i]  = buf[m++];
         tag[i]  = static_cast<int>( buf[m++] );
         type[i] = static_cast<int>( buf[m++] );
         mask[i] = static_cast<int>( buf[m++] );
@@ -453,6 +478,7 @@ int AtomVecMDPDAtomic::pack_exchange( int i, double *buf )
     buf[m++] = v[i][1];
     buf[m++] = v[i][2];
     buf[m++] = rho[i];
+    buf[m++] = phi[i];
     buf[m++] = tag[i];
     buf[m++] = type[i];
     buf[m++] = mask[i];
@@ -481,6 +507,7 @@ int AtomVecMDPDAtomic::unpack_exchange( double *buf )
     v[nlocal][1] = buf[m++];
     v[nlocal][2] = buf[m++];
     rho[nlocal]  = buf[m++];
+    phi[nlocal]  = buf[m++];
     tag[nlocal]  = static_cast<int>( buf[m++] );
     type[nlocal] = static_cast<int>( buf[m++] );
     mask[nlocal] = static_cast<int>( buf[m++] );
@@ -528,6 +555,7 @@ int AtomVecMDPDAtomic::pack_restart( int i, double *buf )
     buf[m++] = v[i][1];
     buf[m++] = v[i][2];
     buf[m++] = rho[i];
+    buf[m++] = phi[i];
     buf[m++] = tag[i];
     buf[m++] = type[i];
     buf[m++] = mask[i];
@@ -562,6 +590,7 @@ int AtomVecMDPDAtomic::unpack_restart( double *buf )
     v[nlocal][1] = buf[m++];
     v[nlocal][2] = buf[m++];
     rho[nlocal]  = buf[m++];
+    phi[nlocal]  = buf[m++];
     tag[nlocal]  = static_cast<int>( buf[m++] );
     type[nlocal] = static_cast<int>( buf[m++] );
     mask[nlocal] = static_cast<int>( buf[m++] );
@@ -594,7 +623,8 @@ void AtomVecMDPDAtomic::data_atom( double *coord, int imagetmp, char **values )
     x[nlocal][1] = coord[1];
     x[nlocal][2] = coord[2];
 
-    rho[nlocal]    = atof( values[5] );
+    rho[nlocal]  = 0;
+    phi[nlocal]  = 0;
 
     image[nlocal] = imagetmp;
 
@@ -638,6 +668,7 @@ bigint AtomVecMDPDAtomic::memory_usage()
     if( atom->memcheck( "f" ) ) bytes += nmax * 3 * sizeof( double );
     if( atom->memcheck( "i_vf" ) ) bytes += nmax * 6 * sizeof( double );
     if( atom->memcheck( "rho" ) ) bytes += nmax * sizeof( double );
+    if( atom->memcheck( "phi" ) ) bytes += nmax * sizeof( double );
 
     return bytes;
 }
@@ -652,7 +683,6 @@ void AtomVecMDPDAtomic::force_clear( AtomAttribute::Descriptor range, int vflag 
     n_work = p_end - p_beg;
 
     dev_force.set( 0.0, meso_device->stream(), p_beg, n_work );
-//    dev_Q.set( 0.0, meso_device->stream(), p_beg, n_work );
     if( vflag ) dev_virial.set( 0.0, meso_device->stream(), p_beg, n_work );
 }
 
