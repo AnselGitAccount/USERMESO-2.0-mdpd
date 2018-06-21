@@ -59,6 +59,7 @@ class Atom : protected Pointers {
   double *cs,*csforce,*vforce;
   int *etag;
   double *rho, *drho;
+  double *phi;
   double *e, *de;
   double **vest;
   double *cv;
