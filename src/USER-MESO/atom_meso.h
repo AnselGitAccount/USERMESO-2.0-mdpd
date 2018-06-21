@@ -52,6 +52,7 @@ public:
     MesoMemory<DeviceScalar,float4> dev_veloc_merged;
     MesoMemory<DeviceScalar,float4> dev_therm_merged;
     MesoMemory<DeviceScalar,r64>    dev_rho;
+    MesoMemory<DeviceScalar,r64>    dev_phi;
     MesoMemory<DeviceScalar,r64>    dev_Q;
     MesoMemory<DeviceScalar,r64>    dev_T;
     MesoMemory<DeviceVector,r32>    dev_CONC;       // Ansel
@@ -101,6 +102,7 @@ public:
     TextureObject tex_tag;
     TextureObject tex_mass;
     TextureObject tex_rho;
+    TextureObject tex_phi;
     TextureObject tex_coord_merged;
     TextureObject tex_veloc_merged;
 

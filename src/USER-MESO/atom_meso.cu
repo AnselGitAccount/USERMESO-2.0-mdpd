@@ -34,6 +34,7 @@ MesoAtom::MesoAtom( class LAMMPS *lmp ) : Atom( lmp ), MesoPointers( lmp ),
     tex_tag( lmp, "MesoAtom::tex_tag" ),
     tex_mass( lmp, "MesoAtom::tex_mass" ),
     tex_rho( lmp, "MesoAtom::tex_rho" ),
+    tex_phi( lmp, "MesoAtom::tex_phi" ),
     tex_coord_merged( lmp, "MesoAtom::tex_coord_merged" ),
     tex_veloc_merged( lmp, "MesoAtom::tex_veloc_merged" ),
     hash_load_factor( 0.5 ),
@@ -55,6 +56,7 @@ MesoAtom::~MesoAtom()
     tex_tag         .unbind();
     tex_mass        .unbind();
     tex_rho         .unbind();
+    tex_phi         .unbind();
     tex_coord_merged.unbind();
     tex_veloc_merged.unbind();
 
