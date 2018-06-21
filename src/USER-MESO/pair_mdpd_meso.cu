@@ -12,6 +12,7 @@
 #include "error.h"
 #include "modify.h"
 #include "fix.h"
+#include "group.h"
 
 #include "atom_meso.h"
 #include "atom_vec_meso.h"
@@ -91,7 +92,8 @@ void MesoPairMDPD::prepare_coeff()
 
 template<int evflag>
 __global__ void gpu_mdpd(
-    texobj tex_coord, texobj tex_veloc, texobj tex_rho,
+    texobj tex_coord, texobj tex_veloc, texobj tex_rho, texobj tex_phi,
+    int* __restrict mask,
     r64* __restrict force_x,   r64* __restrict force_y,   r64* __restrict force_z,
     r64* __restrict virial_xx, r64* __restrict virial_yy, r64* __restrict virial_zz,
     r64* __restrict virial_xy, r64* __restrict virial_xz, r64* __restrict virial_yz,
@@ -102,8 +104,8 @@ __global__ void gpu_mdpd(
     const int pair_padding,
     const int n_type,
     const int p_beg,
-    const int p_end
-)
+    const int p_end,
+    const int mobile_bit )
 {
     extern __shared__ r64 coeffs[];
     for( int p = threadIdx.x; p < n_type * n_type * n_coeff; p += blockDim.x )
@@ -116,8 +118,9 @@ __global__ void gpu_mdpd(
         if( i >= p_beg ) {
             f3u  coord1 = tex1Dfetch<float4>( tex_coord, i );
             f3u  veloc1 = tex1Dfetch<float4>( tex_veloc, i );
-            r64  rho1   = tex1Dfetch<r64>( tex_rho, i );
-
+            r64  rho_i  = tex1Dfetch<r64>( tex_rho, i );
+            r64  phi_i  = tex1Dfetch<r64>( tex_phi, i );
+            int  mask_i = mask[i];
             int  n_pair = pair_count[i];
             int *p_pair = pair_table + ( i - __laneid() ) * pair_padding + __laneid();
             r64 fx   = 0., fy   = 0., fz   = 0.;
@@ -125,38 +128,65 @@ __global__ void gpu_mdpd(
             r64 vrxy = 0., vrxz = 0., vryz = 0.;
             r64 energy = 0.;
 
+
             for( int p = 0; p < n_pair; p++ ) {
                 int j   = __lds( p_pair );
                 p_pair += pair_padding;
                 if( ( p & 31 ) == 31 ) p_pair -= 32 * pair_padding - 32;
+                f3u coord2   	= tex1Dfetch<float4>( tex_coord, j );
+                r64 dx       	= coord1.x - coord2.x;
+                r64 dy       	= coord1.y - coord2.y;
+                r64 dz       	= coord1.z - coord2.z;
+                r64 rsq      	= dx * dx + dy * dy + dz * dz;
+                r64 *coeff_ij 	= coeffs + ( coord1.i * n_type + coord2.i ) * n_coeff;
+                r64 cut      	= coeff_ij[p_cut];
 
-                f3u coord2   = tex1Dfetch<float4>( tex_coord, j );
-                r64 dx       = coord1.x - coord2.x;
-                r64 dy       = coord1.y - coord2.y;
-                r64 dz       = coord1.z - coord2.z;
-                r64 rsq      = dx * dx + dy * dy + dz * dz;
-                r64 *coeff_ij = coeffs + ( coord1.i * n_type + coord2.i ) * n_coeff;
+                // printf("%g %g %g %g %g %g\n",coeff_ij[p_cut],coeff_ij[p_cut_r],coeff_ij[p_gamma],coeff_ij[p_sigma],coeff_ij[p_A_att],coeff_ij[p_B_rep]);
 
-                if( rsq < coeff_ij[p_cut]*coeff_ij[p_cut] && rsq >= EPSILON_SQ ) {
+
+                if( rsq < cut*cut && rsq >= EPSILON_SQ ) {
                     f3u veloc2   = tex1Dfetch<float4>( tex_veloc, j );
                     r64 rinv     = rsqrt( rsq );
                     r64 r        = rsq * rinv;
+                    if (r < EPSILON) continue;
                     r64 dvx      = veloc1.x - veloc2.x;
                     r64 dvy      = veloc1.y - veloc2.y;
                     r64 dvz      = veloc1.z - veloc2.z;
                     r64 dot      = dx * dvx + dy * dvy + dz * dvz;
-                    r64 wc       = 1.0 - r / coeff_ij[p_cut];
+                    r64 wc       = 1.0 - r / cut;
                     r64 wc_r     = MAX(1.0 - r / coeff_ij[p_cut_r] , 0.0) ;
                     r64 wr       = wc;
 
-                    r64 rho2     = tex1Dfetch<r64>( tex_rho, j );
+                    r64 rho_j    = tex1Dfetch<r64>( tex_rho, j );
+                    r64 phi_j    = tex1Dfetch<r64>( tex_phi, j );
+                    int mask_j   = mask[j];
                     r64 rn       = gaussian_TEA<4>( veloc1.i > veloc2.i, veloc1.i, veloc2.i );
-                    r64 gamma_ij = coeff_ij[p_gamma];
-                    r64 sigma_ij = coeff_ij[p_sigma];
                     r64 A_att    = coeff_ij[p_A_att];
                     r64 B_rep    = coeff_ij[p_B_rep];
+                    r64 gamma_ij = coeff_ij[p_gamma];
+                    r64 sigma_ij = coeff_ij[p_sigma];
 
-//                    printf("%g %g %g %g %g %g\n",coeff_ij[p_cut],coeff_ij[p_cut_r],coeff_ij[p_gamma],coeff_ij[p_sigma],coeff_ij[p_A_att],coeff_ij[p_B_rep]);
+                    r64 ratio    = 1.;
+                    if( (mask_i & mobile_bit) ^ (mask_j & mobile_bit) ) {
+                		r64 rcw, phi;
+                    	if( mask_i & mobile_bit ) {
+                    		rcw = cut; phi = phi_i;
+                    	} else if( mask_j & mobile_bit ) {
+                    		rcw = cut; phi = phi_j;
+                    	}
+
+                		r64 rcw_inv = 1./rcw;
+                		phi         = MIN(phi, 0.5);
+                		r64 h 		= 1 - __powd( 2.088*phi*phi*phi + 1.478*phi, 0.25);
+                		h     		= MAX(h, 0.025);
+                		h    	   *= rcw;
+                		ratio       = 1.0 + 0.187*(rcw/h - 1.0) - 0.093*(1.0-h*rcw_inv)*(1.0-h*rcw_inv)*(1.0-h*rcw_inv);
+
+
+//                		printf("i j %d %d phi[i] %g ratio %g \n",i,j,phi,ratio);
+                    }
+                    sigma_ij *= sqrtf(ratio);
+                    gamma_ij *= ratio;
 
 
 //                    gamma_ij = 0;
@@ -166,7 +196,7 @@ __global__ void gpu_mdpd(
 
 
 
-                    r64 fpair    = ( A_att * wc + B_rep * (rho1+rho2) * wc_r )
+                    r64 fpair    = ( A_att * wc + B_rep * (rho_i+rho_j) * wc_r )
                     		     - ( gamma_ij * wr * wr * dot * rinv )
                     		     + ( sigma_ij * wr * rn * dt_inv_sqrt );
                     fpair       *= rinv;
@@ -181,7 +211,7 @@ __global__ void gpu_mdpd(
 
 
                     if( evflag ) {
-                    	energy += 0.5 * A_att * coeff_ij[p_cut] * wr * wr + 0.5 * B_rep * coeff_ij[p_cut_r] * (rho1 + rho2) * wc_r * wc_r;
+                    	energy += 0.5 * A_att * coeff_ij[p_cut] * wr * wr + 0.5 * B_rep * coeff_ij[p_cut_r] * (rho_i + rho_j) * wc_r * wc_r;
                     	vrxx += dx * dx * fpair;
                     	vryy += dy * dy * fpair;
                     	vrzz += dz * dz * fpair;
@@ -220,27 +250,33 @@ void MesoPairMDPD::compute_kernel( int eflag, int vflag, int p_beg, int p_end )
         // evaluate force, energy and virial
         static GridConfig grid_cfg = meso_device->configure_kernel( gpu_mdpd<1>, shared_mem_size );
         gpu_mdpd<1> <<< grid_cfg.x, grid_cfg.y, shared_mem_size, meso_device->stream() >>> (
-            meso_atom->tex_coord_merged, meso_atom->tex_veloc_merged, meso_atom->tex_rho,
+            meso_atom->tex_coord_merged, meso_atom->tex_veloc_merged,
+            meso_atom->tex_rho, meso_atom->tex_phi, meso_atom->dev_mask,
             meso_atom->dev_force (0), meso_atom->dev_force (1), meso_atom->dev_force (2),
             meso_atom->dev_virial(0), meso_atom->dev_virial(1), meso_atom->dev_virial(2),
             meso_atom->dev_virial(3), meso_atom->dev_virial(4), meso_atom->dev_virial(5),
             dlist->dev_pair_count_core, dlist->dev_pair_table,
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
-            atom->ntypes, p_beg, p_end );
+            atom->ntypes, p_beg, p_end,
+            mobile_groupbit );
     } else {
         // evaluate force only
         static GridConfig grid_cfg = meso_device->configure_kernel( gpu_mdpd<0>, shared_mem_size );
         gpu_mdpd<0> <<< grid_cfg.x, grid_cfg.y, shared_mem_size, meso_device->stream() >>> (
-            meso_atom->tex_coord_merged, meso_atom->tex_veloc_merged, meso_atom->tex_rho,
+            meso_atom->tex_coord_merged, meso_atom->tex_veloc_merged,
+            meso_atom->tex_rho, meso_atom->tex_phi, meso_atom->dev_mask,
             meso_atom->dev_force (0), meso_atom->dev_force (1), meso_atom->dev_force (2),
             meso_atom->dev_virial(0), meso_atom->dev_virial(1), meso_atom->dev_virial(2),
             meso_atom->dev_virial(3), meso_atom->dev_virial(4), meso_atom->dev_virial(5),
             dlist->dev_pair_count_core, dlist->dev_pair_table,
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
-            atom->ntypes, p_beg, p_end );
+            atom->ntypes, p_beg, p_end,
+            mobile_groupbit );
     }
+
+    meso_device->sync_device();   // debug
 }
 
 void MesoPairMDPD::compute_bulk( int eflag, int vflag )
@@ -276,11 +312,16 @@ uint MesoPairMDPD::seed_now() {
 
 void MesoPairMDPD::settings( int narg, char **arg )
 {
-    if( narg != 3 ) error->all( FLERR, "Illegal pair_style command" );
+    if( narg != 4 ) error->all( FLERR, "Illegal pair_style command:\n temperature cut_global seed fluid_group" );
 
     temperature = atof( arg[0] );
     cut_global = atof( arg[1] );
     seed = atoi( arg[2] );
+	if ( (mobile_group = group->find( arg[3] ) ) == -1 )
+		error->all( FLERR, "<MESO> Undefined fluid group id in pairstyle mdpd/meso" );
+    mobile_groupbit = group->bitmask[ mobile_group ];
+
+
     if( random ) delete random;
     random = new RanMars( lmp, seed % 899999999 + 1 );
 
@@ -428,7 +469,7 @@ void MesoPairMDPD::write_restart_settings( FILE *fp )
 	fwrite( &temperature, sizeof( double ), 1, fp );
     fwrite( &cut_global, sizeof( double ), 1, fp );
     fwrite( &seed, sizeof( int ), 1, fp );
-    fwrite( &flag_wall, sizeof(int), 1, fp );
+    fwrite( &mobile_groupbit, sizeof(int), 1, fp );
     fwrite( &mix_flag, sizeof( int ), 1, fp );
 }
 
@@ -442,13 +483,13 @@ void MesoPairMDPD::read_restart_settings( FILE *fp )
     	fread( &temperature, sizeof( double ), 1, fp );
         fread( &cut_global, sizeof( double ), 1, fp );
         fread( &seed, sizeof( int ), 1, fp );
-        fread( &flag_wall, sizeof( int ), 1, fp );
+        fread( &mobile_groupbit, sizeof( int ), 1, fp );
         fread( &mix_flag, sizeof( int ), 1, fp );
     }
     MPI_Bcast( &temperature, 1, MPI_DOUBLE, 0, world );
     MPI_Bcast( &cut_global, 1, MPI_DOUBLE, 0, world );
     MPI_Bcast( &seed, 1, MPI_INT, 0, world );
-    MPI_Bcast( &flag_wall, 1, MPI_INT, 0, world );
+    MPI_Bcast( &mobile_groupbit, 1, MPI_INT, 0, world );
     MPI_Bcast( &mix_flag, 1, MPI_INT, 0, world );
 
     if( random ) delete random;
