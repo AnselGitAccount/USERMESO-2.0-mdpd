@@ -48,9 +48,12 @@ public:
 
 protected:
     DeviceScalar<r64> dev_rho;
+    DeviceScalar<r64> dev_phi;
     Pinned<r64> dev_rho_pinned;
-    DeviceScalar<float4> dev_therm_merged;
+    Pinned<r64> dev_phi_pinned;
+//    DeviceScalar<float4> dev_therm_merged;
     double *rho;
+    double *phi;
 
 
     virtual void transfer_impl( std::vector<CUDAEvent> &events, AtomAttribute::Descriptor per_atom_prop, TransferDirection direction, int p_beg, int n_atom, int p_stream, int p_inc, int* permute_to, int* permute_from, int action, bool streamed);
