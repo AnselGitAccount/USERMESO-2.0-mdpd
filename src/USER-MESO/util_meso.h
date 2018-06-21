@@ -65,8 +65,8 @@ struct AtomAttribute {
     static const unsigned long long BOND  = 1ULL << 13;
     static const unsigned long long ANGLE = 1ULL << 14;
     static const unsigned long long DIHED = 1ULL << 15;
+    static const unsigned long long PHI   = 1ULL << 16;
     static const unsigned long long ESSENTIAL = TYPE | TAG | MASS | MASK | COORD | VELOC | IMAGE;
-    // to be continued...
     static const unsigned long long CONCENT = 1ULL << 20;
     static const unsigned long long CONCENTF = 1ULL << 21;
 
