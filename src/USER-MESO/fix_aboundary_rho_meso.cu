@@ -147,8 +147,6 @@ __global__ void gpu_compute_rho(
 		}
 
 		rho[i] = rho_i;
-		//			printf("%d %09.7g \n", i, rho[i] );
-
 	}
 }
 
@@ -206,8 +204,7 @@ void FixArbitraryBoundaryRho::setup_pre_force( int vflag )
 
 
 __global__ void gpu_aboundary(
-    texobj tex_coord, texobj tex_mass,
-    int* __restrict mask,
+    r64* mass, int* __restrict mask,
     r64* __restrict coord_x,   r64* __restrict coord_y,   r64* __restrict coord_z,
     r64* __restrict veloc_x,   r64* __restrict veloc_y,   r64* __restrict veloc_z,
     r64* __restrict phi,
@@ -239,24 +236,18 @@ __global__ void gpu_aboundary(
             p_pair += pair_padding;
             if( ( p & (WARPSZ - 1) ) == WARPSZ - 1 ) p_pair -= WARPSZ * pair_padding - WARPSZ;
 
-            f3u coord2   = tex1Dfetch<float4>( tex_coord, j );
-            r64 dx       = coord1.x - coord2.x;
-            r64 dy       = coord1.y - coord2.y;
-            r64 dz       = coord1.z - coord2.z;
-            r64 rsq      = dx * dx + dy * dy + dz * dz;
-
-
-//            printf("%d %d %d\n",(mask[j] & wall_bit) ,(r < cut_phi), (mask[j] & wall_bit) && (r < cut_phi));
+            const float3 coord2 = make_float3( coord_x[j], coord_y[j], coord_z[j] );
+            const float3 dcoord = coord1 - coord2;
+            r32 rsq      		= normsq(dcoord);
 
             // If j is a wall particle.
             if ( (mask[j] & wall_bit) && (rsq < cut_phi*cut_phi) )  {
     			// compute boundary volume fraction phi & wall-normal.
-                r64 rinv     = rsqrt( rsq );
-                r64 r        = MAX(rsq * rinv, EPSILON);
-                r64 d        = cut_phi - r;
+                r32 rinv     = rsqrt( rsq );
+                r32 r        = MAX(rsq * rinv, EPSILON);
+                r32 d        = cut_phi - r;
     			phi_i       += (cut_phi + 3.*r) * d * d * d * phi_factor;
-    			nw           = nw - (r * d * d * dw_factor) * make_float3( dx, dy, dz ) * rinv;
-//    			printf("d %g phi_i %g\n",d, phi_i);
+    			nw           = nw - (r * d * d * dw_factor) * dcoord * rinv;
             }
         }
         phi[i] = phi_i;  // only for fluid particle.
@@ -265,19 +256,18 @@ __global__ void gpu_aboundary(
         if ( phi_i > phi_c ) {
             nw = normalize( nw );  // Now, nw is the unit vector.
 
-            // calculate the position prior to Initial_Integrate.
-            const r32 dtfm      = dtf / tex1Dfetch<r64>(tex_mass, i);
+            // calculate the position prior to Initial_Integrate -> orig_x.
+            const r32 dtfm      = dtf / mass[i];
             const float3 orig_x = coord1 - v * dtfm;
-            const r32 dot_prod  = dot( v, nw );
-            const r32 tmp     	= MAX( 0.f, dot_prod );  // remove the normal components
+            const r32 tmp  		= MAX( 0.f, dot( v, nw ) );	// remove the normal components
 
             // Update based on bounce-back condition.
-            veloc_x[i]  = -v.x + 2.f * tmp * nw.x;
-            veloc_y[i]  = -v.y + 2.f * tmp * nw.y;
-            veloc_z[i]  = -v.z + 2.f * tmp * nw.z;
-            coord_x[i] += dtv * veloc_x[i];
-            coord_y[i] += dtv * veloc_y[i];
-            coord_z[i] += dtv * veloc_z[i];
+            veloc_x[i]  = -v.x + 2 * tmp * nw.x;
+            veloc_y[i]  = -v.y + 2 * tmp * nw.y;
+            veloc_z[i]  = -v.z + 2 * tmp * nw.z;
+            coord_x[i]  = orig_x.x + dtv * veloc_x[i];
+            coord_y[i]  = orig_x.y + dtv * veloc_y[i];
+            coord_z[i]  = orig_x.z + dtv * veloc_z[i];
         }
     }
 }
@@ -294,8 +284,7 @@ void FixArbitraryBoundaryRho::post_integrate() {
 	if (!grid_cfg.x) grid_cfg = meso_device->configure_kernel( gpu_aboundary );
 
 	gpu_aboundary <<< grid_cfg.x, grid_cfg.y, 0, meso_device->stream() >>> (
-			meso_atom->tex_coord_merged, meso_atom->tex_misc("mass"),
-			meso_atom->dev_mask,
+			meso_atom->dev_mass, meso_atom->dev_mask,
 	        meso_atom->dev_coord(0), meso_atom->dev_coord(1), meso_atom->dev_coord(2),
 	        meso_atom->dev_veloc(0), meso_atom->dev_veloc(1), meso_atom->dev_veloc(2),
             meso_atom->dev_phi,
