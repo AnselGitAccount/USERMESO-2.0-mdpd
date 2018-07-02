@@ -48,6 +48,7 @@ protected:
 
     double   cut_global, temperature;
     int 	 mobile_group, mobile_groupbit;
+    int 	 wall_group, wall_groupbit;
     double **cut;
     double **cut_r;
     double **A_att;

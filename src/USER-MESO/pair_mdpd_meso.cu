@@ -105,7 +105,7 @@ __global__ void gpu_mdpd(
     const int n_type,
     const int p_beg,
     const int p_end,
-    const int mobile_bit )
+    const int mobile_bit, const int wall_bit )
 {
     extern __shared__ r64 coeffs[];
     for( int p = threadIdx.x; p < n_type * n_type * n_coeff; p += blockDim.x )
@@ -166,8 +166,9 @@ __global__ void gpu_mdpd(
                     r64 gamma_ij = coeff_ij[p_gamma];
                     r64 sigma_ij = coeff_ij[p_sigma];
 
+                    /* This part is for arbitrary boundary */
                     r64 ratio    = 1.;
-                    if( (mask_i & mobile_bit) ^ (mask_j & mobile_bit) ) {
+                    if( (mask_i & mobile_bit) && (mask_j & wall_bit) ) { // one of them is mobile, and the other has to be wall.
                 		r64 rcw, phi;
                     	if( mask_i & mobile_bit ) {
                     		rcw = cut; phi = phi_i;
@@ -259,7 +260,7 @@ void MesoPairMDPD::compute_kernel( int eflag, int vflag, int p_beg, int p_end )
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
             atom->ntypes, p_beg, p_end,
-            mobile_groupbit );
+            mobile_groupbit, wall_groupbit );
     } else {
         // evaluate force only
         static GridConfig grid_cfg = meso_device->configure_kernel( gpu_mdpd<0>, shared_mem_size );
@@ -273,7 +274,7 @@ void MesoPairMDPD::compute_kernel( int eflag, int vflag, int p_beg, int p_end )
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
             atom->ntypes, p_beg, p_end,
-            mobile_groupbit );
+            mobile_groupbit, wall_groupbit );
     }
 
     meso_device->sync_device();   // debug
@@ -312,7 +313,7 @@ uint MesoPairMDPD::seed_now() {
 
 void MesoPairMDPD::settings( int narg, char **arg )
 {
-    if( narg != 4 ) error->all( FLERR, "Illegal pair_style command:\n temperature cut_global seed fluid_group" );
+    if( narg != 5 ) error->all( FLERR, "Illegal pair_style command:\n temperature cut_global seed fluid_group wall_group" );
 
     temperature = atof( arg[0] );
     cut_global = atof( arg[1] );
@@ -320,7 +321,9 @@ void MesoPairMDPD::settings( int narg, char **arg )
 	if ( (mobile_group = group->find( arg[3] ) ) == -1 )
 		error->all( FLERR, "<MESO> Undefined fluid group id in pairstyle mdpd/meso" );
     mobile_groupbit = group->bitmask[ mobile_group ];
-
+    if ( (wall_group = group->find( arg[4] ) ) == -1 )
+    		error->all( FLERR, "<MESO> Undefined wall group id in pairstyle mdpd/meso" );
+    wall_groupbit = group->bitmask[ wall_group ];
 
     if( random ) delete random;
     random = new RanMars( lmp, seed % 899999999 + 1 );
