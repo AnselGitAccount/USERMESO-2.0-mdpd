@@ -375,9 +375,9 @@ void ModifiedVerlet::run( int n )
 
             meso_atom->transfer_pre_border();
             nvtx_pop_range( "\u2198Border" );
-            //nvtx_push_range( "\u26D6Border", nvtx_color(4) );
+            nvtx_push_range( "\u26D6Border", nvtx_color(4) );
             comm->borders();
-            //nvtx_pop_range( "\u26D6Border" );
+            nvtx_pop_range( "\u26D6Border" );
             nvtx_push_range( "\u2197Border", nvtx_color(4) );
             meso_atom->transfer_post_border();
             meso_atom->map_set_device();
@@ -417,9 +417,9 @@ void ModifiedVerlet::run( int n )
             nvtx_pop_range( "\u2198Comm" );
             timer->stamp();
 
-            //nvtx_push_range( "\u26D6Comm", nvtx_color(8) );
+            nvtx_push_range( "\u26D6Comm", nvtx_color(8) );
             comm->forward_comm();
-            //nvtx_pop_range( "\u26D6Comm" );
+            nvtx_pop_range( "\u26D6Comm" );
 
             nvtx_push_range( "\u2197Comm", nvtx_color(8) );
             meso_atom->transfer_post_comm();
