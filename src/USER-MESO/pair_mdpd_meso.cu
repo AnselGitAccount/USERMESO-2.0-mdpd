@@ -487,12 +487,14 @@ void MesoPairMDPD::read_restart_settings( FILE *fp )
         fread( &cut_global, sizeof( double ), 1, fp );
         fread( &seed, sizeof( int ), 1, fp );
         fread( &mobile_groupbit, sizeof( int ), 1, fp );
+        fread( &wall_groupbit, sizeof( int ), 1, fp );
         fread( &mix_flag, sizeof( int ), 1, fp );
     }
     MPI_Bcast( &temperature, 1, MPI_DOUBLE, 0, world );
     MPI_Bcast( &cut_global, 1, MPI_DOUBLE, 0, world );
     MPI_Bcast( &seed, 1, MPI_INT, 0, world );
     MPI_Bcast( &mobile_groupbit, 1, MPI_INT, 0, world );
+    MPI_Bcast( &wall_groupbit, 1, MPI_INT, 0, world );
     MPI_Bcast( &mix_flag, 1, MPI_INT, 0, world );
 
     if( random ) delete random;
