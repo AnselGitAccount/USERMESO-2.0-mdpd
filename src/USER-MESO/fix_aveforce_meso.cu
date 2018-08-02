@@ -160,8 +160,8 @@ void MesoFixAveForce::post_force( int vflag )
     meso_device->stream().sync();
     MPI_Allreduce(foriginal_host,foriginal_all_host,4,MPI_DOUBLE,MPI_SUM,world);
 
-    printf("foriginal_host %g %g %g %g \n",foriginal_host[0],foriginal_host[1],foriginal_host[2],foriginal_host[3]);
-    printf("foriginal_all_host %g %g %g %g \n\n",foriginal_all_host[0],foriginal_all_host[1],foriginal_all_host[2],foriginal_all_host[3]);
+//    printf("foriginal_host %g %g %g %g \n",foriginal_host[0],foriginal_host[1],foriginal_host[2],foriginal_host[3]);
+//    printf("foriginal_all_host %g %g %g %g \n\n",foriginal_all_host[0],foriginal_all_host[1],foriginal_all_host[2],foriginal_all_host[3]);
 
     // set force of all participating atoms to same value
     // only for active dimensions
