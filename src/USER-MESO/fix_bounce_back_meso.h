@@ -22,8 +22,7 @@ public:
     virtual void end_of_step();
 
 protected:
-    bool x, y, z;
-
+    r64 xhi, xlo, yhi, ylo, zhi, zlo;
     void bounce_back();
 };
 
