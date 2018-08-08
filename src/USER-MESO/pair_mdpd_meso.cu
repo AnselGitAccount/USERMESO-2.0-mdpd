@@ -105,7 +105,7 @@ __global__ void gpu_mdpd(
     const int n_type,
     const int p_beg,
     const int p_end,
-    const int mobile_bit, const int wall_bit )
+    const int flag_arb_bc, const int mobile_bit, const int wall_bit )
 {
     extern __shared__ r64 coeffs[];
     for( int p = threadIdx.x; p < n_type * n_type * n_coeff; p += blockDim.x )
@@ -167,34 +167,22 @@ __global__ void gpu_mdpd(
                     r64 sigma_ij = coeff_ij[p_sigma];
 
                     /* This part is for arbitrary boundary */
-                    r64 ratio    = 1.;
-                    if( (mask_i & mobile_bit) && (mask_j & wall_bit) ) { // one of them is mobile, and the other has to be wall.
-                		r64 rcw, phi;
-                    	if( mask_i & mobile_bit ) {
-                    		rcw = cut; phi = phi_i;
-                    	} else if( mask_j & mobile_bit ) {
-                    		rcw = cut; phi = phi_j;
-                    	}
-
+                    /* phi, mobile_bit, wall_bit are only called in this block */
+                    if( flag_arb_bc && (mask_i & mobile_bit) && (mask_j & wall_bit) ) { // one of them is mobile, and the other has to be wall.
+                		r64 ratio;
+                		r64 phi = MIN(phi_i, 0.5);
+                		r64 rcw = cut;
                 		r64 rcw_inv = 1./rcw;
-                		phi         = MIN(phi, 0.5);
                 		r64 h 		= 1 - __powd( 2.088*phi*phi*phi + 1.478*phi, 0.25);
                 		h     		= MAX(h, 0.025);
                 		h    	   *= rcw;
                 		ratio       = 1.0 + 0.187*(rcw/h - 1.0) - 0.093*(1.0-h*rcw_inv)*(1.0-h*rcw_inv)*(1.0-h*rcw_inv);
 
+                        sigma_ij *= sqrtf(ratio);
+                        gamma_ij *= ratio;
 
-//                		printf("i j %d %d phi[i] %g ratio %g \n",i,j,phi,ratio);
+//                        printf("i j %d %d phi[i] %g ratio %g \n",i,j,phi,ratio);
                     }
-                    sigma_ij *= sqrtf(ratio);
-                    gamma_ij *= ratio;
-
-
-//                    gamma_ij = 0;
-//                    sigma_ij = 0;
-//                    rho1 = 1;
-//                    rho2 = 1;
-
 
 
                     r64 fpair    = ( A_att * wc + B_rep * (rho_i+rho_j) * wc_r )
@@ -206,10 +194,9 @@ __global__ void gpu_mdpd(
                     fy += dy * fpair;
                     fz += dz * fpair;
 
-//                    printf("rho1 %09.7g rho2 %09.7g, xyz %g %g %g fpair %g rinv %g dxdydz %g %g %g \n",rho1,rho2,coord1.x,coord1.y,coord1.z,fpair,rinv,dx,dy,dz);
+//                    printf("rho1 %09.7g rho2 %09.7g, xyz %g %g %g fpair %g rinv %g dxdydz %g %g %g \n",rho_i,rho_j,coord1.x,coord1.y,coord1.z,fpair,rinv,dx,dy,dz);
 //                    printf("gamma_ij=%g, sigma_ij=%g, wc=%g, wc_r=%g \n",gamma_ij,sigma_ij,wc,wc_r);
 //                    printf("dissi %g \n",( gamma_ij * wr * wr * dot * rinv ));
-
 
                     if( evflag ) {
                     	energy += 0.5 * A_att * coeff_ij[p_cut] * wr * wr + 0.5 * B_rep * coeff_ij[p_cut_r] * (rho_i + rho_j) * wc_r * wc_r;
@@ -260,7 +247,7 @@ void MesoPairMDPD::compute_kernel( int eflag, int vflag, int p_beg, int p_end )
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
             atom->ntypes, p_beg, p_end,
-            mobile_groupbit, wall_groupbit );
+            flag_arb_bc, mobile_groupbit, wall_groupbit );
     } else {
         // evaluate force only
         static GridConfig grid_cfg = meso_device->configure_kernel( gpu_mdpd<0>, shared_mem_size );
@@ -274,10 +261,8 @@ void MesoPairMDPD::compute_kernel( int eflag, int vflag, int p_beg, int p_end )
             meso_atom->dev_e_pair, dev_coefficients,
             1.0 / sqrt( update->dt ), dlist->n_col,
             atom->ntypes, p_beg, p_end,
-            mobile_groupbit, wall_groupbit );
+            flag_arb_bc, mobile_groupbit, wall_groupbit );
     }
-
-    meso_device->sync_device();   // debug
 }
 
 void MesoPairMDPD::compute_bulk( int eflag, int vflag )
@@ -313,17 +298,22 @@ uint MesoPairMDPD::seed_now() {
 
 void MesoPairMDPD::settings( int narg, char **arg )
 {
-    if( narg != 5 ) error->all( FLERR, "Illegal pair_style command:\n temperature cut_global seed fluid_group wall_group" );
+    if( narg < 3 ) error->all( FLERR, "Illegal pair_style command:\n temperature cut_global seed fluid_group wall_group, "
+    		"or temperature cut_global seed " );
 
     temperature = atof( arg[0] );
     cut_global = atof( arg[1] );
     seed = atoi( arg[2] );
-	if ( (mobile_group = group->find( arg[3] ) ) == -1 )
-		error->all( FLERR, "<MESO> Undefined fluid group id in pairstyle mdpd/meso" );
-    mobile_groupbit = group->bitmask[ mobile_group ];
-    if ( (wall_group = group->find( arg[4] ) ) == -1 )
+    flag_arb_bc = 0;
+    if ( narg > 3) {
+    	flag_arb_bc = 1;
+    	if ( (mobile_group = group->find( arg[3] ) ) == -1 )
+    		error->all( FLERR, "<MESO> Undefined fluid group id in pairstyle mdpd/meso" );
+    	mobile_groupbit = group->bitmask[ mobile_group ];
+    	if ( (wall_group = group->find( arg[4] ) ) == -1 )
     		error->all( FLERR, "<MESO> Undefined wall group id in pairstyle mdpd/meso" );
-    wall_groupbit = group->bitmask[ wall_group ];
+    	wall_groupbit = group->bitmask[ wall_group ];
+    }
 
     if( random ) delete random;
     random = new RanMars( lmp, seed % 899999999 + 1 );

@@ -47,6 +47,7 @@ protected:
     DeviceScalar<r64> dev_coefficients;
 
     double   cut_global, temperature;
+    int      flag_arb_bc;
     int 	 mobile_group, mobile_groupbit;
     int 	 wall_group, wall_groupbit;
     double **cut;
