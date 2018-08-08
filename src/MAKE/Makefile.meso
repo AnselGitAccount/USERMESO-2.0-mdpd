@@ -7,14 +7,6 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-
-# check gcc version
-GCC_VERSION = $(shell g++ -dumpversion | awk '{print $$1>=6?"1":"0"}')
-ifeq ($(GCC_VERSION),1)
-	export OMPI_CXX = g++-5.4.0
-endif
-
-
 CC       =  nvcc
 MPICXX   =  mpic++
 ARCH    ?=  sm_35
@@ -45,7 +37,7 @@ else
 ifeq ($(DEBUG),2)
 LINKFLAGS += -O0 -g
 else
-LINKFLAGS = -O -fopenmp
+LINKFLAGS = -O3 -fopenmp
 endif
 endif
 
