@@ -98,10 +98,10 @@ __global__ void gpu_fix_aveforce_sum_force(
 	r64 fzsum     = __warp_sum( fz );
 	int countwarp = __warp_sum( count );
 	if ( __laneid()==0 ) {
-		atomicAdd( fsum  , fxsum );
-		atomicAdd( fsum+1, fysum );
-		atomicAdd( fsum+2, fzsum );
-		atomicAdd( fsum+3, r64(countwarp) );
+		atomic_add( fsum  , fxsum );
+		atomic_add( fsum+1, fysum );
+		atomic_add( fsum+2, fzsum );
+		atomic_add( fsum+3, countwarp );
 //		printf("fxsum %g %g %g countwarp %d ",fxsum, fysum, fzsum,countwarp);
 	}
 }
