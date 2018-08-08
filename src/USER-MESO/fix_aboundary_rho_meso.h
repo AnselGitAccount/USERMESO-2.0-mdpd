@@ -35,6 +35,7 @@ public:
 
 
 protected:
+    int flag_compute_arb_bc;
     int wall_group, wall_groupbit;
     int mobile_group, mobile_groupbit;
     r64 rc, sigma, frac, xcut;

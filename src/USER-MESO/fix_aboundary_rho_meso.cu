@@ -38,6 +38,10 @@ FixArbitraryBoundaryRho::FixArbitraryBoundaryRho( LAMMPS *lmp, int narg, char **
     phi_factor  = 0.;
     dw_factor   = 0.;
 
+    /* Default is to ONLY compute rho.
+     * If wall/mobile groups are supplies, ALSO do arbitrary boundary. */
+
+    flag_compute_arb_bc = 0;
 
     for(int i = 0 ; i < narg ; i++) {
         if (!strcmp(arg[i],"cut_rho")) {
@@ -60,12 +64,15 @@ FixArbitraryBoundaryRho::FixArbitraryBoundaryRho( LAMMPS *lmp, int narg, char **
         	if ( (wall_group = group->find( arg[++i] ) ) == -1 )
         		error->all( FLERR, "<MESO> Undefined wall group id in fix aboundary/rho/meso" );
             wall_groupbit = group->bitmask[ wall_group ];
+            flag_compute_arb_bc = 1;
             continue;
         }
         if (!strcmp(arg[i],"mobile")) {
         	if ( (mobile_group = group->find( arg[++i] ) ) == -1 )
         		error->all( FLERR, "<MESO> Undefined fluid group id in fix aboundary/rho/meso" );
             mobile_groupbit = group->bitmask[ mobile_group ];
+            flag_compute_arb_bc = 1;
+            continue;
         }
     }
 
@@ -79,14 +86,20 @@ FixArbitraryBoundaryRho::FixArbitraryBoundaryRho( LAMMPS *lmp, int narg, char **
     }
 
     r64 rc_7 = cut_rho*cut_rho*cut_rho*cut_rho*cut_rho*cut_rho*cut_rho;
-    rho_factor = 105.0 / (16.0 * M_PI * rc_7);
+//    rho_factor = 105.0 / (16.0 * M_PI * rc_7); // For Lucy Kernel
+    rho_factor = 15.0 / (2.0 * M_PI * cut_rho*cut_rho*cut_rho*cut_rho*cut_rho);
 
     rc_7 = cut_phi*cut_phi*cut_phi*cut_phi*cut_phi*cut_phi*cut_phi;
     phi_factor = 105.0 / (16.0 * M_PI * rho_wall * rc_7);
     dw_factor = -315.0 / ( 4.0 * M_PI * rho_wall * rc_7);
 
 
-    if( cut_rho==0 | cut_phi==0 | phi_c==0 | rho_factor==0 | phi_factor==0 | dw_factor==0 )
+    // If ONLY compute rho.
+    if( !flag_compute_arb_bc && cut_rho==0 )
+    	error->all( FLERR, "<MESO> Fix aboundary/rho/meso parameters are not set properly.");
+
+    // If do arbitrary boundary AS WELL.
+    if( flag_compute_arb_bc && (cut_rho==0 | cut_phi==0 | phi_c==0 | rho_factor==0 | phi_factor==0 | dw_factor==0) )
     	error->all( FLERR, "<MESO> Fix aboundary/rho/meso parameters are not set properly.");
 }
 
@@ -98,8 +111,8 @@ void FixArbitraryBoundaryRho::init() {
 int FixArbitraryBoundaryRho::setmask()
 {
     int mask = 0;
-    mask |= FixConst::PRE_FORCE;
-    mask |= FixConst::POST_INTEGRATE;
+    mask |= FixConst::PRE_FORCE;            					// gpu_compute_rho
+    if(flag_compute_arb_bc) mask |= FixConst::POST_INTEGRATE;   // gpu_aboundary
     return mask;
 }
 
@@ -138,10 +151,11 @@ __global__ void gpu_compute_rho(
 			r32 h        = cut_rho;
 
 
-			// Calculate Many Body Density rho; Lucy Kernel;
+			// Calculate Many Body Density rho;
 			if ( rsq < h*h && rsq >= EPSILON_SQ ) {
 				r32 r  = rsq * rinv;
-				r32 wf = (h + 3.0 * r) * (h - r) * (h - r) * (h - r) * rho_factor;
+//				r32 wf = (h + 3.0 * r) * (h - r) * (h - r) * (h - r) * rho_factor;  // Lucy Kernel
+				r32 wf = (h - r) * (h - r) * rho_factor;
 				rho_i += tex1Dfetch<r64>( tex_mass, i ) * wf;
 			}
 		}
