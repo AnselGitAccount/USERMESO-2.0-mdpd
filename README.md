@@ -2,13 +2,13 @@
 
 ## Introduction
 
-<sub>user</sub>**MESO 2.5** is a highly optimized hybrid CPU/GPU particle simulation package. This package has a code structure design that aligns with  **LAMMPS**, and is highly customizable. The package's programming language is CUDA C/C++ with MPI and OpenMP.
+**<sub>user</sub>MESO 2.5** is a highly optimized hybrid CPU/GPU particle simulation package. This package has a code structure design that aligns with  **LAMMPS**, and is highly customizable. The package's programming language is CUDA C/C++ with MPI and OpenMP.
 
 ## Version History
 
-####<sub>user</sub>**MESO 2.5 **
+**<sub>user</sub>MESO 2.5**
 
-(Dated Aug 2018) <sub>user</sub>**MESO 2.5** (https://github.com/AnselGitAccount/USERMESO-2.0-mdpd) is an updated version of  <sub>user</sub>**MESO 2.0**. This version was developed by Ansel Blumers (then  intern at Idaho National Laboratory and PhD student at Brown University) and Yidong Xia (then at Idaho National Laboratory). Major updates in this version include the implementation of 1) the many-body DPD (mDPD) model for multi-fluid/phase flow [1]  and 2) a no-slip and no-penetration boundary condition for fluid flow in an arbitrarily complex geometry [2] for the mDPD model.
+(Dated Aug 2018) **<sub>user</sub>MESO 2.5** (https://github.com/AnselGitAccount/USERMESO-2.0-mdpd) is an updated version of  **<sub>user</sub>MESO 2.0**. This version was developed by Ansel Blumers (then  intern at Idaho National Laboratory and PhD student at Brown University) and Yidong Xia (then at Idaho National Laboratory). Major updates in this version include the implementation of 1) the many-body DPD (mDPD) model for multi-fluid/phase flow [1]  and 2) a no-slip and no-penetration boundary condition for fluid flow in an arbitrarily complex geometry [2] for the mDPD model.
 
 Reference
 
@@ -16,15 +16,15 @@ Reference
 [2] https://www.sciencedirect.com/science/article/pii/S0021999117308525
 
 
-####<sub>user</sub>**MESO 2.0**
+**<sub>user</sub>MESO 2.0**
 
-(Dated Apr 2017) <sub>user</sub>**MESO 2.0** (https://github.com/AnselGitAccount/USERMESO-2.0) is an updated version of the original <sub>user</sub>**MESO** code. This version was developed by Ansel Blumers and Yu-Hang Tang (then at Brown University). Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable. 
+(Dated Apr 2017) **<sub>user</sub>MESO 2.0** (https://github.com/AnselGitAccount/USERMESO-2.0) is an updated version of the original **<sub>user</sub>MESO** code. This version was developed by Ansel Blumers and Yu-Hang Tang (then at Brown University). Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable. 
 
 The details regarding code implementation can be found at https://www.sciencedirect.com/science/article/pii/S0010465517301042
 
-####<sub>user</sub>**MESO**
+**<sub>user</sub>MESO**
 
- (Dated Oct 2016) <sub>user</sub>**MESO** (https://github.com/yhtang/MESO) was developed by Yu-Hang Tang (then at Brown University) to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
+ (Dated Oct 2016) **<sub>user</sub>MESO** (https://github.com/yhtang/MESO) was developed by Yu-Hang Tang (then at Brown University) to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
 
 - An atomic-free warp-synchronous neighbor list construction algorithm;
 - A 2-level particle reordering scheme, which aligns with the cell list lattice boundaries for generating strictly monotonic neighbor list;
