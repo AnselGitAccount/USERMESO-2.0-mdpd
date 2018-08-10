@@ -1,5 +1,4 @@
-# meso = makefile template for USER-MESO package
-# Systen config = Fedora 18, CUDA 5.5, mpich-1.4
+# meso_summitdev = Makefile for the SUMMITDEV
 
 SHELL = /bin/sh
 
@@ -7,49 +6,33 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC       =  nvcc
-MPICXX   =  mpic++
-ARCH    ?=  sm_35
-CCFLAGS  =  -ccbin $(MPICXX) -x cu -arch=$(ARCH) --maxrregcount 64 -Xcompiler -fopenmp
-
+CC =		nvcc
 ifeq ($(DEBUG),1)
-CCFLAGS += -g -O0
+CCFLAGS =	-g -G -lineinfo -ccbin mpic++ -Xcompiler -fopenmp -O3 -x cu -arch=sm_60 --maxrregcount 64
 else
-ifeq ($(DEBUG),2)
-CCFLAGS += -g -G -O0 -lineinfo	
-else
-CCFLAGS += -O3
-endif
+CCFLAGS =	-ccbin mpic++ -Xcompiler -fopenmp -O3 -x cu -arch=sm_60 --maxrregcount 64
 endif
 
 ifeq ($(PROFILE),1)
 CCFLAGS += -lineinfo -D_USE_NVTX
 endif
-SHFLAGS  = -fPIC
-DEPFLAGS = -M
 
-LINK      =  mpic++
+SHFLAGS =	
+DEPFLAGS =	-M
 
-LINKFLAGS = -fopenmp
-ifeq ($(DEBUG),1)
-LINKFLAGS += -O0 -g
-else
-ifeq ($(DEBUG),2)
-LINKFLAGS += -O0 -g
-else
-LINKFLAGS = -O3 -fopenmp
-endif
-endif
+LINK =		mpic++
+LINKFLAGS =	-O3 -fopenmp
 
-LIB       = -lpthread -lcudart -lrt -lstdc++
 ifeq ($(PROFILE),1)
 LIB      += -lnvToolsExt
 endif
-SIZE      =  size
 
-ARCHIVE    =  ar
-ARFLAGS    = -rcsv
-SHLIBFLAGS = -shared
+SIZE =		size
+CP = 		cp
+
+ARCHIVE =	ar
+ARFLAGS =	-rcsv
+SHLIBFLAGS =	-static
 
 # ---------------------------------------------------------------------
 # LAMMPS-specific settings
@@ -59,7 +42,7 @@ SHLIBFLAGS = -shared
 # LAMMPS ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-LMP_INC =    -DLAMMPS_GZIP
+LMP_INC =	-DLAMMPS_GZIP
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -68,9 +51,9 @@ LMP_INC =    -DLAMMPS_GZIP
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC  =       
+MPI_INC =       
 MPI_PATH = 
-MPI_LIB  =    
+MPI_LIB =	
 
 # FFT library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 6)
@@ -79,9 +62,9 @@ MPI_LIB  =
 # PATH = path for FFT library
 # LIB = name of FFT library
 
-FFT_INC  =  
+FFT_INC =       
 FFT_PATH = 
-FFT_LIB  = 
+FFT_LIB =	
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
@@ -90,20 +73,26 @@ FFT_LIB  =
 # PATH = path for JPEG library
 # LIB = name of JPEG library
 
-JPG_INC  =       
-JPG_PATH =     
-JPG_LIB  =    
+JPG_INC =       
+JPG_PATH = 	
+JPG_LIB =	
+
+# CUDA library, OPTINAL
+
+CUDA_INC  = -I/sw/summitdev/cuda/9.0.69/include
+CUDA_PATH = -L/sw/summitdev/cuda/9.0.69/lib64 
+CUDA_LIB  = -lcudart
 
 # ---------------------------------------------------------------------
 # build rules and dependencies
 # no need to edit this section
 
-include    Makefile.package.settings
-include    Makefile.package
+include	Makefile.package.settings
+include	Makefile.package
 
-EXTRA_INC = $(LMP_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC)
-EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(PKG_SYSPATH)
-EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(PKG_SYSLIB)
+EXTRA_INC = $(LMP_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC) $(CUDA_INC)
+EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(PKG_SYSPATH) $(CUDA_PATH)
+EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(PKG_SYSLIB) $(CUDA_LIB)
 
 # Path to src files
 
@@ -113,16 +102,17 @@ vpath %.h ..
 
 # Link target
 
-$(EXE): $(OBJ)
+$(EXE):	$(OBJ)
 	$(LINK) $(LINKFLAGS) $(EXTRA_PATH) $(OBJ) $(EXTRA_LIB) $(LIB) -o $(EXE)
 	$(SIZE) $(EXE)
+	$(CP) $(EXE) $(ATLAS)
 
 # Library targets
 
-lib: $(OBJ)
+lib:	$(OBJ)
 	$(ARCHIVE) $(ARFLAGS) $(EXE) $(OBJ)
 
-shlib: $(OBJ)
+shlib:	$(OBJ)
 	$(CC) $(CCFLAGS) $(SHFLAGS) $(SHLIBFLAGS) $(EXTRA_PATH) -o $(EXE) \
         $(OBJ) $(EXTRA_LIB) $(LIB)
 

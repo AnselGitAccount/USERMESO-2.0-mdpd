@@ -26,7 +26,7 @@ LINK      =  mpic++
 ifeq ($(DEBUG),1)
 LINKFLAGS = -O0 -g -fopenmp
 else
-LINKFLAGS = -O -fopenmp
+LINKFLAGS = -O3 -fopenmp
 endif
 LIB       = -lpthread -lcudart -lrt -lstdc++
 ifeq ($(PROFILE),1)
