@@ -1,8 +1,31 @@
-# <sub>user</sub>**MESO 2.0**
+# <sub>user</sub>**MESO 2.5**
 
-<sub>user</sub>**MESO 2.0** is an updated version of <sub>user</sub>**MESO**, which is a GPU-accelerated extension package to **LAMMPS**.
+## Introduction
 
-<sub>user</sub>**MESO** (https://github.com/yhtang/MESOwas) was developed by Yu-Hang Tang to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
+**<sub>user</sub>MESO 2.5** is a highly optimized hybrid CPU/GPU particle simulation package. This package has a code structure design that aligns with  **LAMMPS**, and is highly customizable. The package's programming language is CUDA C/C++ with MPI and OpenMP.
+
+## Version History
+
+**<sub>user</sub>MESO 2.5**
+
+(Dated Aug 2018) **<sub>user</sub>MESO 2.5** (https://github.com/AnselGitAccount/USERMESO-2.0-mdpd) is an updated version of  **<sub>user</sub>MESO 2.0**. This version was developed by Ansel Blumers (then  intern at Idaho National Laboratory and PhD student at Brown University) and Yidong Xia (then at Idaho National Laboratory). Major updates in this version include the implementation of 1) the many-body DPD (mDPD) model for multi-fluid/phase flow [1]  and 2) a no-slip and no-penetration boundary condition for fluid flow in an arbitrarily complex geometry [2] for the mDPD model.
+
+Reference
+
+[1] https://aip.scitation.org/doi/abs/10.1063/1.4981136
+[2] https://www.sciencedirect.com/science/article/pii/S0021999117308525
+
+
+**<sub>user</sub>MESO 2.0**
+
+(Dated Apr 2017) **<sub>user</sub>MESO 2.0** (https://github.com/AnselGitAccount/USERMESO-2.0) is an updated version of the original **<sub>user</sub>MESO** code. This version was developed by Ansel Blumers and Yu-Hang Tang (then at Brown University). Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable. 
+
+The details regarding code implementation can be found at https://www.sciencedirect.com/science/article/pii/S0010465517301042
+
+**<sub>user</sub>MESO**
+
+ (Dated Oct 2016) **<sub>user</sub>MESO** (https://github.com/yhtang/MESO) was developed by Yu-Hang Tang (then at Brown University) to simulate molecular dynamics, classic dissipative particle dynamics, and smoothed particle dynamics. It integrates several algorithmic innovations that take advantage of CUDA devices:
+
 - An atomic-free warp-synchronous neighbor list construction algorithm;
 - A 2-level particle reordering scheme, which aligns with the cell list lattice boundaries for generating strictly monotonic neighbor list;
 - A locally transposed neighbor list;
@@ -11,19 +34,37 @@
 - Radix sorting with GPU stream support;
 - Pairwise random number generation based on per-timestep binary particle signatures and the prepriority Tiny Encryption Algorithm.
 
-As an upgrade version, <sub>user</sub>**MESO 2.0** injects new capabilities into <sub>user</sub>**MESO** . Now it is possible to simulate advection, diffusion, and reaction processes with dissipative particle dynamics (tDPD). Another major upgrade is the ability to simulate red blood cells. Combining tDPD and the red blood cell model, the simulation of the chemical-releasing process from the red blood cells becomes realizable.  
 
-The details regarding code implementation can be found at https://arxiv.org/abs/1611.06163
+The details regarding code implementation can be found at https://www.sciencedirect.com/science/article/pii/S0010465514002203
 
 ## Compilation Guide
 
-> cd <working_copy>/src
->
-> make yes-molecule
->
-> make yes-user-meso
->
-> make meso ARCH=[sm_30|sm_35|sm_52|sm_60|...]
+### On Linux desktop
+
+**==Important: do not install Nvidia GPU drivers with your Linux distro's software installer ==**
+
+If you happen to have done so, we suggest you remote them. Follow Nvidia's official instruction to install CUDA Toolkit (e.g. version 9.2) including the GPU driver. Then check if the GPU(s) can be detected.
+
+	cd ~/NVIDIA_CUDA-9.2_Samples/1_Utilities/deviceQuery
+	make
+	./deviceQuery
+
+Set the required environment variales.
+
+	export PATH=/usr/local/cuda/bin:${PATH}
+	export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+	export LIBRARY_PATH=/usr/local/cuda/lib64:$LIBRARY_PATH
+
+Compile the source code as follows. To  know the compute capability version of your GPU, check https://en.wikipedia.org/wiki/CUDA
+
+	cd <code_repository>/src
+	make yes-molecule
+	make yes-user-meso
+	make meso ARCH=[sm_30|sm_35|sm_52|sm_60|sm_61|sm_70|...]
+
+Run a test simulation (e.g. using 2 GPUs and 2 MPI ranks with 1 GPU/rank and 2 threads/rank)
+
+	OMP_NUM_THREADS=2 mpirun -np 2 <lmp_meso> -i in.test
 
 ## Running a simple example
 Simulation of a red blood cell in fluid.
@@ -40,7 +81,7 @@ Benchmark of RBC suspension in a single node. The simulations of different syste
 > ./run_file.sh
 
 ## Example Simulation Visualization
-| Chemical-release of Red Blood Cells in a Microfluidic Device |     
+| Chemical-release of Red Blood Cells in a Microfluidic Device |
 |:-------------------------------------------------------------|
 |<img src="visualizations/chemical_release_RBC_device.png">|
 
