@@ -80,6 +80,13 @@ Benchmark of RBC suspension in a single node. The simulations of different syste
 >
 > ./run_file.sh
 
+## Example simulation visualization of flow in realistic nanoporous rock
+
+<img src="visualizations/flow_in_nanoporous_rock.png">
+
+
+# <sub>user</sub>**MESO 2.0**
+
 ## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |
 |:-------------------------------------------------------------|
