@@ -1,0 +1,40 @@
+
+echo screen
+
+
+############### set units, dimension and global boundary type
+units		lj
+dimension	3
+boundary	p p p
+neighbor	1.0 bin
+neigh_modify	every 4 delay 0 check yes
+atom_style      mdpd/atomic/meso 4
+
+############### create geometry and give number of atom types
+lattice		fcc 4.0
+region		box block 0 100 0 100 0 100
+create_box	1 box
+region		regID_ini block 40 60 0 100 0 100
+create_atoms	1 region regID_ini
+
+mass		1 1.0
+pair_style      mdpd/meso 1.0 1.0 123456
+pair_coeff      * * -50 25 12.4 1.0 0.75       # cut_Att=1.0, cut_Rep=0.75
+fix             BC all aboundary/rho/meso cut_rho 0.75
+
+############### set time step size and integration method
+timestep	0.01
+fix             int_f all nve/meso
+run_style       mvv/meso
+
+############### output thermodynamics every N timesteps
+thermo		100
+#dump		1 all custom 100 out.lammpstrj id type xs ys zs vx vy vz
+
+
+############### compute and output variable profiles
+fix             dn all density/meso along x nbin 50 every 1000 window 490 output out.profile
+
+
+############### production run
+run		10000
