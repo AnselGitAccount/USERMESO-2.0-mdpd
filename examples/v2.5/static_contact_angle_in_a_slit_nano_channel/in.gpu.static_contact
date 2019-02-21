@@ -1,0 +1,108 @@
+#########################################################################
+## In the datafile LAMMPS_init.dat, the wall is already equilibrated.
+## So I can remove wall/reflect fixes and make the box p p p.
+#########################################################################
+
+echo screen
+
+
+############### set variables for convenience
+
+### model parameters
+
+variable	kBT		equal 1.0
+variable	seed		equal 2654868
+variable	cut_att		equal 1.00
+variable	cut_rep		equal 0.75
+variable	cut_rho		equal 0.75
+variable	cut_phi		equal 1.00
+variable	skin		equal 0.3*${cut_att}
+
+variable	rho_solids	equal 8.0
+
+variable	A_att_11	equal -40 # fluid1--fluid1
+variable	A_att_22	equal -40 # solid2--solid2
+variable	A_att_12	equal -20 # fluid1--solid2
+
+variable	B_rep		equal 25
+variable	gamma		equal 18.0
+
+variable	type_fluid1	equal 1
+variable	type_solid2	equal 2
+
+variable	phi_c		equal 0.5
+
+variable	mass_fluid1	equal 1
+variable	mass_solid2	equal 1
+
+### domain parameters
+
+variable	xlo		equal -30
+variable	xhi		equal  30
+variable	ylo		equal -5
+variable	yhi		equal  5
+variable	zlo		equal -2.5
+variable	zhi		equal  2.5
+
+### runtime parameters
+
+variable	dt		equal 0.01
+
+############### set units, dimension and global boundary type
+
+units		lj
+dimension	3
+boundary	p p p
+neighbor	${skin} bin
+neigh_modify	every 1 delay 0 check yes
+atom_style	mdpd/atomic/meso 3
+
+read_data       LAMMPS_init_noimage.dat
+
+group		group_fluid1 type ${type_fluid1}
+group		group_solid2 type ${type_solid2}
+
+############### specify bead-to-bead pair style and coefficients
+
+pair_style      mdpd/meso ${kBT} ${cut_att} 123456 group_fluid1 group_solid2
+
+pair_coeff	1 1 ${A_att_11} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+pair_coeff	1 2 ${A_att_12} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+pair_coeff	2 2 ${A_att_22} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+
+############### specify unit mass
+
+mass		${type_fluid1} ${mass_fluid1}
+mass		${type_solid2} ${mass_solid2}
+
+############### specify time step size
+
+timestep	${dt}
+
+############### necessary to have this BC to compute local density
+
+fix             BC all aboundary/rho/meso cut_rho ${cut_rho} phi_c ${phi_c} cut_phi ${cut_phi} rho_wall ${rho_solids} wall group_solid2 mobile group_fluid1
+
+############### specify thermodynamic output frequency
+
+thermo		1000
+
+############### homogenize the wall particles
+
+timestep        0.01
+fix             int_f group_fluid1 nve/meso    # set to fluids only.
+run_style       mvv/meso
+
+############### initial fluid reservoir and run to equilibrium
+
+group		group_fluid1 type ${type_fluid1}
+
+run		5000                           # pre-run
+reset_timestep  0
+
+
+fix             dn group_fluid1 density/meso along y nbin 10 every 99999 window 99998 output out.profile
+dump            dmp all custom 1000 out.lammpstrj  id type xs ys zs
+
+
+run		100000

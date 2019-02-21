@@ -1,0 +1,14 @@
+# Chunk-averaged data for fix fixID_prf and group ave
+# Timestep Number-of-chunks Total-count
+# Chunk Coord1 Ncount density/number
+100000 10 3998.6
+  1 -4.5 0 0
+  2 -3.5 333.341 1.11114
+  3 -2.5 543.194 1.81065
+  4 -1.5 560.156 1.86719
+  5 -0.5 568.124 1.89375
+  6 0.5 567.668 1.89223
+  7 1.5 558.507 1.86169
+  8 2.5 540.21 1.8007
+  9 3.5 327.401 1.09134
+  10 4.5 0 0
