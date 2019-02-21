@@ -1,0 +1,101 @@
+
+echo screen
+
+############### set variables for convenience
+variable        cut_att         equal 1.0
+variable	cut_rep		equal 0.75
+variable	cut_rho		equal 0.75
+variable	cut_phi		equal 1.00
+
+variable	rho_solids	equal 8.0
+variable	A_att_11	equal -40 # solids--solids
+variable	A_att_12	equal -40 # solids--fluid1
+variable	A_att_13	equal -10 # solids--fluid2
+variable	A_att_22	equal -40 # fluid1--fluid1
+variable	A_att_23	equal -20 # fluid1--fluid2
+variable	A_att_33	equal -40 # fluid2--fluid2
+variable	B_rep		equal 25
+variable	gamma		equal 18.0
+variable	mass_1		equal 1
+variable	mass_2		equal 1
+variable	mass_3		equal 1
+
+variable	type_solids	equal 1
+variable	type_fluid1	equal 2
+variable	type_fluid2	equal 3
+variable	phi_c		equal 0.5
+
+variable	gforce		equal  0.1
+variable	gx		equal  0
+variable	gy		equal  0
+variable	gz		equal  1
+
+############### set units, dimension and global boundary type
+units		lj
+dimension	3
+boundary	p p p
+neighbor	0.3 bin
+neigh_modify	every 1 delay 0 check yes
+atom_style      mdpd/atomic/meso 6
+
+############### domain of solid beads data should already
+############### have additional space for porous flow outlet
+read_data	init_solids_fluids.dat
+#read_data       init_debug.dat
+#read_data	data.makeup
+
+############### specify groups of beads for convenience
+group		group_solids type ${type_solids}
+group		group_fluid1 type ${type_fluid1}
+#group		group_fluid2 type ${type_fluid2}
+group		group_fluids union group_fluid1
+
+############### specify bead-to-bead pair style and coefficients
+pair_style	mdpd/meso 1.0 ${cut_att} 123456 group_fluids group_solids
+pair_coeff	1 1 ${A_att_11} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+pair_coeff	1 2 ${A_att_12} 0 ${gamma} ${cut_att} ${cut_rep}
+#pair_coeff	1 3 ${A_att_13} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+pair_coeff	2 2 ${A_att_22} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+#pair_coeff	2 3 ${A_att_23} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+#pair_coeff	3 3 ${A_att_33} ${B_rep} ${gamma} ${cut_att} ${cut_rep}
+
+
+
+############### specify unit mass
+mass		1 ${mass_1}
+mass		2 ${mass_2}
+#mass		3 ${mass_3}
+
+############### impose wall boundary condition
+fix		BC all aboundary/rho/meso cut_rho ${cut_rho} phi_c ${phi_c} cut_phi ${cut_phi} rho_wall ${rho_solids} wall group_solids mobile group_fluids
+
+############### specify gravitational force and direction 
+############### If all particles have the same mass, fix gravity is equivalent to fix addforce
+fix		GRAVITY group_fluids addforce/meso 0 0 ${gforce} 
+
+############### zero out velocity of solid beads
+velocity	group_solids set 0.0 0.0 0.0
+velocity	group_fluids set 0.0 0.0 0.0
+
+############### specify thermodynamic output frequency
+thermo		100
+
+############### calculate domain average velocity
+#region		BOX block EDGE EDGE EDGE EDGE EDGE EDGE
+#compute		VZAVE group_fluids reduce ave vz
+#thermo_style	custom step temp pe etotal press c_VZAVE
+
+############### specify thermodynamics output frequency
+timestep        0.01
+fix             int_f group_fluids nve/meso    # set to fluids only.
+run_style       mvv/meso
+
+############### specify output details
+dump		1 group_fluids custom 100 out_fluids.lammpstrj id type xs ys zs 
+dump		2 group_solids custom 100 out_solids.lammpstrj id type xs ys zs
+
+############### start running
+run	        10000 	
+
+############### specify restart
+write_data	rest_whole.dat
