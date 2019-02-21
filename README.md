@@ -62,9 +62,21 @@ Compile the source code as follows. To  know the compute capability version of y
 	make yes-user-meso
 	make meso ARCH=[sm_30|sm_35|sm_52|sm_60|sm_61|sm_70|...]
 
-Run a test simulation (e.g. using 2 GPUs and 2 MPI ranks with 1 GPU/rank and 2 threads/rank)
+## Running a simple pore flow
 
-	OMP_NUM_THREADS=2 mpirun -np 2 <lmp_meso> -i in.test
+Simulation of fluid flow in a quasi-2D nanoporous domain (e.g. using 2 GPUs and 2 MPI ranks with 1 GPU/rank and 2 threads/rank)
+
+	cd <code_repository>/examples/v2.5/quasi_2d_pores
+	OMP_NUM_THREADS=2 mpirun -np 2 ../../../src/lmp_meso -i in.quasi_2d_pores
+
+<img src="visualizations/quasi_2d_pores.png">
+
+## Example simulation visualization of flow in realistic nanoporous rock
+
+<img src="visualizations/flow_in_nanoporous_rock.png">
+
+
+# <sub>user</sub>**MESO 2.0**
 
 ## Running a simple example
 Simulation of a red blood cell in fluid.
@@ -79,13 +91,6 @@ Benchmark of RBC suspension in a single node. The simulations of different syste
 > cd <working_copy>/example/single_node_benchmark
 >
 > ./run_file.sh
-
-## Example simulation visualization of flow in realistic nanoporous rock
-
-<img src="visualizations/flow_in_nanoporous_rock.png">
-
-
-# <sub>user</sub>**MESO 2.0**
 
 ## Example Simulation Visualization
 | Chemical-release of Red Blood Cells in a Microfluidic Device |
