@@ -130,7 +130,7 @@ public:
                      tag.c_str(),
                      size2text( device_allocated() ).c_str() );
             for( typename std::map<void *, DevicePointerAttr>::iterator i = mem_table.begin(); i != mem_table.end(); i++ ) {
-                if ( i->second.memoryType == cudaMemoryTypeDevice ) {
+                if ( i->second.type == cudaMemoryTypeDevice ) {
                     fprintf( stderr, "<MESO> allocated: %12d bytes, %s\n",
                              i->second.size,
                              i->second.tag.c_str() );
@@ -161,7 +161,7 @@ public:
                      tag.c_str(),
                      size2text( device_allocated() ).c_str() );
             for( typename std::map<void *, DevicePointerAttr>::iterator i = mem_table.begin(); i != mem_table.end(); i++ ) {
-                if ( i->second.memoryType == cudaMemoryTypeDevice ) {
+                if ( i->second.type == cudaMemoryTypeDevice ) {
                     fprintf( stderr, "<MESO> allocated: %12d bytes, %s\n",
                              i->second.size,
                              i->second.tag.c_str() );
@@ -191,7 +191,7 @@ public:
             ptr = malloc_device<TYPE>( tag, nElem );
             if( zero ) cudaMemset( ptr, 0, nElem * sizeof( TYPE ) );
             return;
-        } else if( p->second.memoryType == cudaMemoryTypeHost ) {
+        } else if( p->second.type == cudaMemoryTypeHost ) {
             fprintf( stderr, "<MESO> Host memory cannot be re-allocated to Device memory %p\n", ptr );
             cudaDeviceReset();
             exit( 0 );
@@ -219,7 +219,7 @@ public:
             ptr = malloc_device_pitch<TYPE>( tag, pitch, width, height );
             if( zero ) cudaMemset( ptr, 0, pitch * height );
             return;
-        } else if( p->second.memoryType == cudaMemoryTypeHost ) {
+        } else if( p->second.type == cudaMemoryTypeHost ) {
             fprintf( stderr, "<MESO> Host memory cannot be re-allocated to Device memory %p\n", ptr );
             cudaDeviceReset();
             exit( 0 );
@@ -301,7 +301,7 @@ public:
             ptr = malloc_host<TYPE>( tag, nElem );
             if( zero ) memset( ptr, 0, nElem * sizeof( TYPE ) );
             return;
-        } else if( p->second.memoryType == cudaMemoryTypeDevice ) {
+        } else if( p->second.type == cudaMemoryTypeDevice ) {
             fprintf( stderr, "<MESO> Device memory cannot be re-allocated to Host memory %p\n", ptr );
             cudaDeviceReset();
             exit( 0 );
