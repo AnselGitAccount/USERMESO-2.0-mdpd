@@ -174,42 +174,30 @@ __inline__ __host__ __device__ T bound( T x, T lower, T upper )
 {
     return max( lower, min( x, upper ) );
 }
-__inline__ __host__ __device__ uint bit_space3( uint x )
+
+__inline__ __host__ __device__ unsigned long long bit_space3( uint x )
 {
+#if 0
     x = ( x | ( x << 12 ) ) & 0X00FC003FU;
     x = ( x | ( x <<  6 ) ) & 0X381C0E07U;
     x = ( x | ( x <<  4 ) ) & 0X190C8643U;
     x = ( x | ( x <<  2 ) ) & 0X49249249U;
-    return x;
+#endif
+    unsigned long long r = 0;
+    for(int i = 0, j = 0; i < 21; ++i, j += 3 ) {
+	    r |= ( ( x >> i ) & 0x1ULL ) << j;
+    }
+    return r;
 }
 
-__inline__ __host__ __device__ uint interleave3( uint i, uint j, uint k )
+__inline__ __host__ __device__ unsigned long long interleave3( uint i, uint j, uint k )
 {
     return bit_space3( i ) | ( bit_space3( j ) << 1 ) | ( bit_space3( k ) << 2 ) ;
 }
 
-__inline__ __device__ __host__ uint morton_encode( uint x, uint y, uint z )
+__inline__ __device__ __host__ unsigned long long morton_encode( uint x, uint y, uint z )
 {
     return interleave3( x, y, z );
-}
-
-__inline__ __device__ __host__ void morton_decode( uint code, uint &x, uint &y, uint &z )
-{
-    x = code & 0x09249249;            // x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
-    x = ( x ^ ( x >>  2 ) ) & 0x030c30c3; // x = ---- --98 ---- 76-- --54 ---- 32-- --10
-    x = ( x ^ ( x >>  4 ) ) & 0x0300f00f; // x = ---- --98 ---- ---- 7654 ---- ---- 3210
-    x = ( x ^ ( x >>  8 ) ) & 0xff0000ff; // x = ---- --98 ---- ---- ---- ---- 7654 3210
-    x = ( x ^ ( x >> 16 ) ) & 0x000003ff; // x = ---- ---- ---- ---- ---- --98 7654 3210
-    y = ( code >> 1 ) & 0x09249249;
-    y = ( y ^ ( y >>  2 ) ) & 0x030c30c3;
-    y = ( y ^ ( y >>  4 ) ) & 0x0300f00f;
-    y = ( y ^ ( y >>  8 ) ) & 0xff0000ff;
-    y = ( y ^ ( y >> 16 ) ) & 0x000003ff;
-    z = ( code >> 2 ) & 0x09249249;
-    z = ( z ^ ( z >>  2 ) ) & 0x030c30c3;
-    z = ( z ^ ( z >>  4 ) ) & 0x0300f00f;
-    z = ( z ^ ( z >>  8 ) ) & 0xff0000ff;
-    z = ( z ^ ( z >> 16 ) ) & 0x000003ff;
 }
 
 __inline__ __device__ double __2_to_n( int n )

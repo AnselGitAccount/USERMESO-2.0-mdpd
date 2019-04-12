@@ -682,69 +682,10 @@ void MesoNeighbor::binning_meso( MesoNeighList *list, bool ghost )
 //  exit(0);
 }
 
-#if 0
-// POTENTIAL BUG IN CUDA RUNTIME?
-// NEW-DELETE PAIR DOES NOT RELEASE MEMORY
 __global__ void gpu_stencil_full_bin_3d(
     int *neighbor_count,
     int *neighbor_bin,
-    const int  mbinx,
-    const int  mbiny,
-    const int  mbinz,
-    const int  neighbor_range,
-    const int  neighbin_padding
-)
-{
-    int BidX = blockIdx.x * blockDim.x + threadIdx.x;
-    int BidY = blockIdx.y * blockDim.y + threadIdx.y;
-    int BidZ = blockIdx.z * blockDim.z + threadIdx.z;
-
-    if( BidX >= mbinx || BidY >= mbiny || BidZ >= mbinz ) return;
-
-    int  Bid = calc_bid( BidX, BidY, BidZ, mbinx, mbiny );
-    int  nStencil = 0;
-    uint* NeighBinMorton = new uint[neighbin_padding];
-    neighbor_bin += Bid * neighbin_padding ;
-
-    for( int k = -neighbor_range ; k <= neighbor_range ; k++ )
-        for( int j = -neighbor_range ; j <= neighbor_range ; j++ )
-            for( int i = -neighbor_range ; i <= neighbor_range ; i++ ) {
-                int NewBidX = BidX + i ;
-                int NewBidY = BidY + j ;
-                int NewBidZ = BidZ + k ;
-                if( NewBidX < 0 || NewBidX >= mbinx
-                        || NewBidY < 0 || NewBidY >= mbiny
-                        || NewBidZ < 0 || NewBidZ >= mbinz ) continue;
-                neighbor_bin   [ nStencil ] = calc_bid( NewBidX, NewBidY, NewBidZ, mbinx, mbiny ) ;
-                NeighBinMorton[ nStencil ] = morton_encode( NewBidX, NewBidY, NewBidZ );
-                if( NewBidX == 0 || NewBidX == mbinx - 1
-                        || NewBidY == 0 || NewBidY == mbiny - 1
-                        || NewBidZ == 0 || NewBidZ == mbinz - 1 ) NeighBinMorton[ nStencil ] += 0x80000000;
-                nStencil++;
-            }
-
-    // sort: bubble sort!
-    for( int i = 0 ; i < nStencil ; i++ )
-        for( int j = i + 1 ; j < nStencil ; j++ ) {
-            if( NeighBinMorton[ i ] > NeighBinMorton[ j ] ) {
-                int tmp1 = neighbor_bin[ i ];
-                neighbor_bin[ i ] = neighbor_bin[ j ];
-                neighbor_bin[ j ] = tmp1 ;
-                uint tmp2 = NeighBinMorton[ i ];
-                NeighBinMorton[ i ] = NeighBinMorton[ j ];
-                NeighBinMorton[ j ] = tmp2 ;
-            }
-        }
-
-    neighbor_count[ Bid ] = nStencil;
-    delete [] NeighBinMorton;
-}
-#endif
-
-__global__ void gpu_stencil_full_bin_3d(
-    int *neighbor_count,
-    int *neighbor_bin,
-    uint *stencil_key,
+    unsigned long long *stencil_key,
     const int  mbinx,
     const int  mbiny,
     const int  mbinz,
@@ -760,7 +701,7 @@ __global__ void gpu_stencil_full_bin_3d(
 
     int  bid = calc_bid( bid_x, bid_y, bid_z, mbinx, mbiny );
     int  stencil_sz = 0;
-    uint * key = stencil_key + bid * neighbin_padding;
+    unsigned long long * key = stencil_key + bid * neighbin_padding;
     neighbor_bin += bid * neighbin_padding ;
 
     for( int k = -neighbor_range ; k <= neighbor_range ; k++ )
@@ -772,7 +713,7 @@ __global__ void gpu_stencil_full_bin_3d(
                 if( bid_x_new < 0 || bid_x_new >= mbinx
                         || bid_y_new < 0 || bid_y_new >= mbiny
                         || bid_z_new < 0 || bid_z_new >= mbinz ) continue;
-                neighbor_bin   [ stencil_sz ] = calc_bid( bid_x_new, bid_y_new, bid_z_new, mbinx, mbiny ) ;
+                neighbor_bin [ stencil_sz ] = calc_bid( bid_x_new, bid_y_new, bid_z_new, mbinx, mbiny ) ;
                 key[ stencil_sz ] = morton_encode( bid_x_new, bid_y_new, bid_z_new );
                 if( bid_x_new == 0 || bid_x_new == mbinx - 1
                         || bid_y_new == 0 || bid_y_new == mbiny - 1
@@ -787,7 +728,7 @@ __global__ void gpu_stencil_full_bin_3d(
                 int tmp1 = neighbor_bin[ i ];
                 neighbor_bin[ i ] = neighbor_bin[ j ];
                 neighbor_bin[ j ] = tmp1 ;
-                uint tmp2 = key[ i ];
+                unsigned long long tmp2 = key[ i ];
                 key[ i ] = key[ j ];
                 key[ j ] = tmp2 ;
             }
@@ -811,7 +752,7 @@ void MesoNeighbor::stencil_full_bin_3d_meso( NeighList *list, int sx, int sy, in
     grid_size.y = n_block( mbiny, block_size.y );
     grid_size.z = n_block( mbinz, block_size.z );
 
-    DevicePitched<uint> dev_stencil_key( lmp, "MesoNeighbor::dev_stencil_key" );
+    DevicePitched<unsigned long long> dev_stencil_key( lmp, "MesoNeighbor::dev_stencil_key" );
     dev_stencil_key.grow( dlist->dev_neighbor_bin.pitch_elem(), mbinx * mbiny * mbinz );
 
     gpu_stencil_full_bin_3d <<< grid_size, block_size, 0, meso_device->stream() >>> (
