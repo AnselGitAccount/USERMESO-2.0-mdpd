@@ -2,7 +2,9 @@
 *.lammpstrj
 log.lammps
 *.log
+src/.nfs*
 src/Obj_meso/
+src/Obj_meso_summit/
 src/angle_area_volume_meso.cu
 src/angle_area_volume_meso.h
 src/angle_harmonic_meso.cu
@@ -165,6 +167,7 @@ src/fix_wall_region_meso.cu
 src/fix_wall_region_meso.h
 src/lib_dispatcher_meso.h
 src/lmp_meso
+src/lmp_meso_summit
 src/lodepng_meso.cpp
 src/lodepng_meso.h
 src/math_meso.h
