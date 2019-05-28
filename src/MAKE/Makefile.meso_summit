@@ -1,5 +1,5 @@
 # meso = makefile template for USER-MESO package
-# Systen config = Fedora 18, CUDA 5.5, mpich-1.4
+# Systen config = ORNL Summit HPC; GCC 4.8.5; CUDA 10.1; IBM Spectrum MPI
 
 SHELL = /bin/sh
 
@@ -96,8 +96,8 @@ JPG_LIB  =
 
 # CUDA library, OPTINAL
 
-CUDA_INC  = -I/sw/summit/cuda/9.2.148/include
-CUDA_PATH = -L/sw/summit/cuda/9.2.148/lib64
+CUDA_INC  = -I/sw/summit/cuda/10.1.105/include
+CUDA_PATH = -L/sw/summit/cuda/10.1.105/lib64
 CUDA_LIB  = -lcudart
 
 # ---------------------------------------------------------------------
