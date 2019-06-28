@@ -86,6 +86,7 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   cs = csforce = vforce = ervelforce = NULL;
   etag = NULL;
   rho = drho = NULL;
+  phi = NULL;
   e = de = NULL;
   cv = NULL;
   vest = NULL;
