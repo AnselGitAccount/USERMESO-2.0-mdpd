@@ -19,7 +19,9 @@ The development of **<sub>user</sub>MESO 2.5** is supported through the Idaho Na
 References
 
 [1] https://aip.scitation.org/doi/abs/10.1063/1.4981136
+
 [2] https://www.sciencedirect.com/science/article/pii/S0021999117308525
+
 [3] https://arxiv.org/abs/1903.10134
 
 
