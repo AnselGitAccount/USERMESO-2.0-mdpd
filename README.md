@@ -8,12 +8,19 @@
 
 **<sub>user</sub>MESO 2.5**
 
-(Dated Aug 2018) **<sub>user</sub>MESO 2.5** (https://github.com/AnselGitAccount/USERMESO-2.0-mdpd) is an updated version of  **<sub>user</sub>MESO 2.0**. This version was developed by Ansel Blumers (then  intern at Idaho National Laboratory and PhD student at Brown University) and Yidong Xia (then at Idaho National Laboratory). Major updates in this version include the implementation of 1) the many-body DPD (mDPD) model for multi-fluid/phase flow [1]  and 2) a no-slip and no-penetration boundary condition for fluid flow in an arbitrarily complex geometry [2] for the mDPD model.
+(Dated Aug 2018) **<sub>user</sub>MESO 2.5** (https://github.com/AnselGitAccount/USERMESO-2.0-mdpd) is an updated version of  **<sub>user</sub>MESO 2.0**. This version was developed by Ansel Blumers (then  intern at Idaho National Laboratory and PhD student at Brown University) and Yidong Xia (then at Idaho National Laboratory). Major updates in this version include the implementation of 1) the many-body DPD (mDPD) model for multi-fluid/phase flow [1]  and 2) a no-slip and no-penetration boundary condition for fluid flow in an arbitrarily complex geometry [2] for the mDPD model. Refer to the authors' manuscript for details [3].
 
-Reference
+Acknowledgments
+
+
+The development of **<sub>user</sub>MESO 2.5** is supported through the Idaho National Laboratory (INL) Laboratory Directed Research & Development (LDRD) Program under the U.S. Department of Energy Idaho Operations Office Contract DE-AC07-05ID14517.
+
+
+References
 
 [1] https://aip.scitation.org/doi/abs/10.1063/1.4981136
 [2] https://www.sciencedirect.com/science/article/pii/S0021999117308525
+[3] https://arxiv.org/abs/1903.10134
 
 
 **<sub>user</sub>MESO 2.0**
